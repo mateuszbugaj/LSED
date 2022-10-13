@@ -1,0 +1,6 @@
+# Arduino
+name: Arduino
+portname: ttyUSB0
+baudrate: 115200
+cameras:
+  - 'video0'

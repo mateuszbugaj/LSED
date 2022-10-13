@@ -1,0 +1,4 @@
+#twitch
+service: twitch
+name: <name>
+token: <token>
