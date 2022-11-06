@@ -1,7 +1,7 @@
 # Device 1
 name: 'Manipulator'
-portname: 'ttyUSB1'
-baudrate: 9600
+portName: 'ttyUSB1'
+baudRate: 9600
 cameras:
   - 'video4'
   - 'video2'

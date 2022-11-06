@@ -1,0 +1,6 @@
+# Example Device
+name: Example
+portName: ttyUSBExample
+baudRate: 9600
+cameras:
+  - 'videoExample'

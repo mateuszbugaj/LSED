@@ -1,23 +1,26 @@
 package Device;
 
+import Interpreter.Interpreter;
 import Utils.Subscriber;
 import View.Camera;
 import Utils.Publisher;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import com.fazecast.jSerialComm.SerialPortTimeoutException;
 import com.github.sarxos.webcam.Webcam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Supplier;
 
 public class Device implements Publisher {
+    private static final Logger logger = LoggerFactory.getLogger(Device.class);
     private final String deviceName;
     private final String portName;
     private final SerialCom serialCom;
@@ -25,79 +28,92 @@ public class Device implements Publisher {
     private final ArrayList<ReceivedMessage> receivedMessages = new ArrayList<>();
     private final ArrayList<Subscriber<ReceivedMessage>> receivedMessageSubscriber = new ArrayList<>();
     private final ArrayList<Camera> cameras = new ArrayList<>();
+    private final ArrayList<DeviceCommand> deviceCommands = new ArrayList<>();
+    private final Stack<String> deviceInstructions = new Stack<>();
+    private Boolean waitingForConformation = false;
+    private Integer timeoutTimer = 100; // sec
+    private Thread deviceThread;
 
-    public Device(String configFile) throws IOException {
+    public Device(String configFile) throws Throwable {
         this.configFile = configFile;
+        logger.info("Configuring device from file: " + configFile);
 
         Yaml yaml = new Yaml();
         Map<String, Object> data = yaml.load(new FileReader(configFile));
 
         deviceName = (String) data.get("name");
-        portName = (String) data.get("portname");
-        Integer baudrate = (Integer) data.get("baudrate");
+        logger.debug("Device name: " + deviceName);
 
-        ArrayList<String> cameraNames = (ArrayList<String>) data.get("cameras");
-        if(cameraNames !=null){
-            for(String cameraName: cameraNames){
-                System.out.println(cameraName);
-                Webcam webcam = Webcam.getWebcams().stream().filter(i -> i.getName().contains("/dev/" + cameraName)).findFirst().orElseThrow();
+        portName = data.get("portName") == null ? null : (String) data.get("portName");
+        logger.debug("Port name: " + portName);
+
+        Integer baudRate = (Integer) (data.get("baudRate") == null ? DeviceConfig.DEFAULT_BAUD_RATE : data.get("baudRate"));
+        logger.debug("Baud rate: " + baudRate);
+
+        ArrayList<String> cameraNames = data.get("cameras") == null ? new ArrayList<>() : (ArrayList<String>) data.get("cameras");
+        logger.debug("Device cameras: " + cameraNames.toString());
+
+        for(String cameraName: cameraNames){
+            logger.debug("Adding camera " + cameraName);
+            Webcam webcam = Webcam.getWebcams().stream().filter(i -> i.getName().contains("/dev/" + cameraName)).findFirst().orElse(null);
+            if(webcam != null){
                 Camera camera = new Camera(webcam);
                 camera.start();
                 cameras.add(camera);
+            } else {
+                logger.error("Camera " +cameraName + " not found");
             }
-        } else {
-            System.out.println("No cameras defined for: " + deviceName);
         }
 
         Object commandsObject = data.get("commands");
         if(commandsObject != null){
-            System.out.println((ArrayList<String>) commandsObject);
+            ArrayList<Map<String, Object>> commands = (ArrayList<Map<String, Object>>) commandsObject;
+            for(Map<String, Object> command: commands){
+                deviceCommands.add(Interpreter.buildCommand(command));
+            }
         }
 
-        SerialPort serialPort = Arrays
-                .stream(SerialPort.getCommPorts())
-                .filter(i -> i.getSystemPortName().contains(portName))
-                .findFirst()
-                .orElseThrow();
+        serialCom = new SerialCom(portName, baudRate);
+        serialCom.addDataListener(new SerialPortDataListenerImpl(this));
 
-        serialCom = new SerialCom(serialPort, baudrate);
-
-        serialPort.addDataListener(new SerialPortDataListener() {
-            private final int CUTOFF_ASCII = '\r';
-            private String connectedMessage = "";
-
+        deviceThread = new Thread(new Runnable() {
             @Override
-            public int getListeningEvents() {
-                return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-            }
+            public void run() {
+                logger.info("Device thread is running");
+                while(true){
+                    if(!waitingForConformation && !deviceInstructions.empty()){
+                        try {
+                            sendMessage(deviceInstructions.pop());
+                            waitingForConformation = true;
+                            logger.debug("Device is waiting for instruction confirmation");
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
 
-            @Override
-            public void serialEvent(SerialPortEvent serialPortEvent) {
-                SerialPort serialPort = serialPortEvent.getSerialPort();
-                String buffer = getBuffer(serialPort);
-                connectedMessage = connectedMessage.concat(buffer);
+                    try {
 
-                if((connectedMessage.indexOf(CUTOFF_ASCII) + 1) > 0) {
-                    String outputString = connectedMessage
-                            .substring(0, connectedMessage.indexOf(CUTOFF_ASCII) + 1)
-                            .replace("\n", "")
-                            .replace("\r", "");
-
-                    connectedMessage = connectedMessage.substring(connectedMessage.indexOf(CUTOFF_ASCII) + 1);
-                    ReceivedMessage receivedMessage = new ReceivedMessage(outputString, new Timestamp(new Date().getTime()));
-                    receivedMessages.add(receivedMessage); // todo: is this list even used?
-                    receivedMessageSubscriber.forEach(s -> s.update(receivedMessage));
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
-
-            protected String getBuffer(SerialPort serialPort){
-                int bytesAvailable = serialPort.bytesAvailable();
-                byte[] buffer = new byte[bytesAvailable];
-                serialPort.readBytes(buffer, bytesAvailable);
-
-                return new String(buffer);
-            }
         });
+
+        deviceThread.start();
+    }
+
+    // todo: temp, should not be public
+    public void receiveMessage(ReceivedMessage receivedMessage){
+        logger.debug("Received message: " + receivedMessage.getMessage());
+        receivedMessages.add(receivedMessage); // todo: is this list even used?
+        if(waitingForConformation && receivedMessage.getMessage().compareTo("done") == 0){
+            logger.debug("Device is no longer waiting");
+            waitingForConformation = false;
+        }
+
+        receivedMessageSubscriber.forEach(s -> s.update(receivedMessage));
     }
 
     public String getDeviceName(){
@@ -109,7 +125,7 @@ public class Device implements Publisher {
     }
 
     public void sendMessage(String message) throws IOException {
-        System.out.println("Sending: " + message);
+        logger.debug("Sending message: " + message);
         serialCom.sendMessage(message + '\n' + '\r');
     }
 
@@ -119,6 +135,14 @@ public class Device implements Publisher {
 
     public ArrayList<Camera> getCameras() {
         return cameras;
+    }
+
+    public ArrayList<DeviceCommand> getDeviceCommands() {
+        return deviceCommands;
+    }
+
+    public void addDeviceInstruction(String instruction){
+        deviceInstructions.push(instruction);
     }
 
     @Override

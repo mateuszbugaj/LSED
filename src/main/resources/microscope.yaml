@@ -1,0 +1,19 @@
+# Microscope
+name: Microscope
+portName: ttyUSB0
+baudRate: 9600
+cameras:
+  - 'video0'
+commands:
+  - name: "Light Switch"
+    description: "Switch bed light ON and OFF."
+    prefix: "light"
+    params:
+      - name: "State"
+        type: String
+        values: [ "on", "off" ]
+      - name: "Intensity"
+        type: Integer
+        range: [ 100 ]
+        optional: true
+    devicePrefix: "lgt"

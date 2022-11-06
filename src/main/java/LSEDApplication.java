@@ -1,55 +1,131 @@
 import Device.Device;
 import Device.DeviceManager;
-import Device.ReceivedMessage;
+import Device.SerialPortNotFoundException;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
+import StreamingService.MessageType;
 import StreamingService.UserMessage;
 import View.AuxiliaryWindow;
 import View.MainWindow;
 import com.fazecast.jSerialComm.SerialPort;
+import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamDiscoveryService;
+import com.github.sarxos.webcam.ds.buildin.WebcamDefaultDriver;
 import javafx.application.Application;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class LSEDApplication extends Application {
+    public static Logger logger = LoggerFactory.getLogger(LSEDApplication.class);
+
     public static void main(String[] args) {
         Application.launch();
     }
 
     @Override
     public void start(Stage stage) throws IOException {
+        logger.info("LSED Start");
         stage.setTitle("LSED");
 
-        for(SerialPort serialPort:SerialPort.getCommPorts()){
-            System.out.println(serialPort.getSystemPortName());
+        logger.info("Available device ports: " + Arrays.toString(SerialPort.getCommPorts()));
+        logger.info("Available camera ports: " + Webcam.getWebcams().toString());
+        WebcamDiscoveryService discoveryService = Webcam.getDiscoveryService();
+        discoveryService.stop();
+        discoveryService.setEnabled(false);
+
+        DeviceManager deviceManager = new DeviceManager();
+
+        //todo: make better way of deciding on not including specific device than try and catch block
+        try{
+            Device device1 = new Device("src/main/resources/microscope.yaml");
+            deviceManager.addDevice(device1);
+        } catch (Throwable e){
+            logger.error(e.toString());
         }
 
-        Device device1 = new Device("src/main/resources/arduino.yaml");
-        Device device2 = new Device("src/main/resources/manipulator.yaml");
-        DeviceManager deviceManager = new DeviceManager();
-        deviceManager.addDevice(device1);
-        deviceManager.addDevice(device2);
-
-//        for(int i = 0; i < 5; i++){
-//            deviceManager.getDeviceState(0).receivedMessages.add(new ReceivedMessage("xxx", new Date()));
-//        }
+        try{
+            Device device2 = new Device("src/main/resources/manipulator.yaml");
+            deviceManager.addDevice(device2);
+        } catch (Throwable e){
+            logger.error(e.toString());
+        }
 
         Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
-        Chat youtubeChat = new Chat("src/main/resources/youtube.yaml");
+//        Chat youtubeChat = new Chat("src/main/resources/youtube.yaml");
         ChatManager chatManager = new ChatManager();
         chatManager.addChat(twitchChat);
-        chatManager.addChat(youtubeChat);
+//        chatManager.addChat(youtubeChat);
+        deviceManager.addDeviceChangeSubscriber(chatManager);
 
-//        for(int i = 0; i < 5; i++){
-//            chatManager.getChatMessages().add(new UserMessage("User1", "XXX", new Date()));
-//        }
+        chatManager.update(new UserMessage("Admin", "Application start", new Date()).setMessageType(MessageType.ADMIN_MESSAGE));
 
         MainWindow mainWindow = new MainWindow(stage, deviceManager, chatManager);
         mainWindow.show();
 
         AuxiliaryWindow auxiliaryWindow = new AuxiliaryWindow(deviceManager, chatManager);
+        auxiliaryWindow.addSubscriber(chatManager);
+
+        //todo: here to notify all DeviceChangeSubscribers
+        if(deviceManager.getDevices().size() > 0){
+            deviceManager.changeSelectedDevice(0);
+        }
+
+        /*
+        todo:
+        AuxiliaryWindow should implement and be viewed as a chat.
+        That means it should notify its subscribers about new messages
+
+        ChatManager chatManager = new ChatManager();
+        AuxiliaryWindow auxiliaryWindow = new AuxiliaryWindow(deviceManager, chatManager);
+        auxiliaryWindow.addSubscriber(chatManager);
+
+        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
+        twitchChat.addSubscriber(chatManager);
+        chatManager.addChat(twitchChat); // is this even necessary? It might be only to display what chats are available
+
+        Interpreter interpreter = new Interpreter(); // Interpreter does not need to know about the chatManager if it is a subscriber of all chats
+        twitchChat.addSubscriber(interpreter);
+        auxiliaryWindow.addSubscriber(interpreter);
+
+        NOW
+        what if, instead of creating and adding chats by hand, chat manager could build them for me by searching for the
+        right config files in the resources directory?
+        Also, chat manager could be aware of the interpreter and use it to interpret incoming user messages.
+
+        Interpreter interpreter = new Interpreter();
+        ChatManager chatManager = new ChatManager(interpreter);
+        AuxiliaryWindow auxiliaryWindow = new AuxiliaryWindow(deviceManager, chatManager);
+        auxiliaryWindow.addSubscriber(chatManager);
+
+        Messages generated by auxiliaryWindow will be interpreted automatically.
+        In the same fashion, DeviceManager could search for config files of devices and build them.
+
+        Both DeviceManager and ChatManager could run something like service discovery system to search for new configs.
+        If it looks like a duck, it quacks like a duck then it is a duck.
+
+
+        Problems:
+        ChatManager and every chat as well as the Interpreter will be high-coupled. Interpreter probably will need to be
+        high-coupled with DeviceManager. This makes all mayor components in the system high-coupled.
+
+        Solutions:
+        First, define what elements needs to know about which elements and what types of signals are sent during execution of the program.
+        For example we know that ChatService generates UserMessage. This UserMessage needs to get to the ChatManager to be saved and
+        referenced by the GUI. UserMessage also will be used by the Interpreter to generate commands sent to the devices (by the Device manager
+        or not? ) as well as commands used by the system to change device, camera and so on.
+        Devices and Chats can be similar to each other in behavior which needs to be investigated. DeviceManager as well as ChatManager might
+        operate with the same design patterns.
+
+
+         */
+
         auxiliaryWindow.show();
     }
 }

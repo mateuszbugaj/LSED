@@ -31,7 +31,9 @@ public class Twitch implements ChatService{
         twitchClient.getEventManager().onEvent(IRCMessageEvent.class, new Consumer<IRCMessageEvent>() {
             @Override
             public void accept(IRCMessageEvent ircMessageEvent) {
-                subscribers.forEach(s -> s.update(new UserMessage(ircMessageEvent.getUserName(), ircMessageEvent.getMessage().get(), ircMessageEvent.getFiredAt().getTime())));
+                if(ircMessageEvent.getMessage().isPresent()){
+                    subscribers.forEach(s -> s.update(new UserMessage(ircMessageEvent.getUserName(), ircMessageEvent.getMessage().get(), ircMessageEvent.getFiredAt().getTime())));
+                }
             }
         });
     }

@@ -3,6 +3,8 @@ package StreamingService;
 import Utils.Subscriber;
 import Utils.Publisher;
 import javafx.scene.image.Image;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileNotFoundException;
@@ -12,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class Chat implements Publisher {
+    private static final Logger logger = LoggerFactory.getLogger(Chat.class);
     private final String chatName;
     private ChatService service; // todo: add abstraction layer, different services like zoom
     private final String configFile; // todo: Path type?
@@ -21,6 +24,7 @@ public class Chat implements Publisher {
 
     public Chat(String configFile) throws FileNotFoundException {
         this.configFile = configFile;
+        logger.info("Configuring chat from file: " + configFile);
 
         Yaml yaml = new Yaml();
         Map<String, Object> data = yaml.load(new FileReader(configFile));

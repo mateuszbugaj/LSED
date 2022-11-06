@@ -5,6 +5,7 @@ import Device.DeviceManager;
 import Device.ReceivedMessage;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
+import StreamingService.MessageType;
 import StreamingService.UserMessage;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -22,6 +23,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,6 +33,7 @@ import java.util.List;
 // The view class
 // Each component of the GUI should be its own object
 public class MainWindow {
+    private static final Logger logger = LoggerFactory.getLogger(MainWindow.class);
     private final Stage stage;
     private final DeviceManager deviceManager;
     private final ChatManager chatManager;
@@ -68,11 +72,17 @@ public class MainWindow {
         viewBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
         viewBox.setPadding(new Insets(0, 0, 10, 0));
 
-        Device device = deviceManager.getDevice(deviceManager.selectedDeviceIndex.get());
-        ArrayList<Camera> cameras = device.getCameras();
-
-        Pane mainFramePane = new Pane(cameras.get(0).getFrameView());
-        cameras.get(0).getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
+        Device device;
+        ArrayList<Camera> cameras = new ArrayList<>();
+        Pane mainFramePane = new Pane();
+        try{
+            device = deviceManager.getDevice(deviceManager.selectedDeviceIndex.get());
+            cameras.addAll(device.getCameras());
+            mainFramePane.getChildren().add(cameras.get(0).getFrameView());
+            cameras.get(0).getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
+        } catch (IndexOutOfBoundsException e){
+            logger.error(e.getMessage());
+        }
 
         BorderPane deviceBorderPane = new BorderPane();
         viewBox.setCenter(mainFramePane);
@@ -195,18 +205,84 @@ public class MainWindow {
     }
 
     private TextFlow generateUserMessageCell(UserMessage userMessage){
-        Text date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "]");
-        date.setFill(Color.LIGHTSLATEGREY);
-        Text user = new Text(userMessage.getUser() + ": ");
-        user.setFill(Color.MEDIUMSEAGREEN);
-        // todo: this is temp solution, device needs to be assigned to message in other way
-        userMessage.setTargetDevice(deviceManager.getDevice(deviceManager.selectedDeviceIndex.get()));
+        Text date = new Text();
+        Text user = new Text();
+        Text device = new Text();
+        Text content = new Text();
 
-        Text device = new Text("/" + userMessage.getTargetDevice().getDeviceName()); // todo: this needs to be saved with the message
-        device.setFill(Color.POWDERBLUE);
-        Text content = new Text("$ " + userMessage.getContent());
-        content.setFill(Color.WHITE);
-        TextFlow textFlow = new TextFlow(date, user, device, content);
+        switch (userMessage.getMessageType()){
+            case USER_MESSAGE -> {
+                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
+                date.setFill(Color.LIGHTSLATEGREY);
+
+                user = new Text(userMessage.getUser() + ": ");
+                user.setFill(Color.MEDIUMSEAGREEN);
+
+                content = new Text(" $ " + userMessage.getContent());
+                content.setFill(Color.GREY);
+            }
+
+            case USER_COMMAND -> {
+                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
+                date.setFill(Color.LIGHTSLATEGREY);
+
+                user = new Text(userMessage.getUser() + ": ");
+                user.setFill(Color.MEDIUMSEAGREEN);
+
+                if(userMessage.getTargetDevice() == null){
+                    device = new Text("/");
+                } else {
+                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
+                }
+                device.setFill(Color.POWDERBLUE);
+
+                content = new Text(" $ " + userMessage.getContent());
+                content.setFill(Color.WHITE);
+            }
+
+            case ADMIN_MESSAGE -> {
+                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
+                date.setFill(Color.LIGHTSLATEGREY);
+
+                user = new Text(userMessage.getUser());
+                user.setFill(Color.TOMATO);
+
+                //todo: Should admin message contain info about the device
+//                if(userMessage.getTargetDevice() == null){
+//                    device = new Text("/");
+//                } else {
+//                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
+//                }
+//                device.setFill(Color.POWDERBLUE);
+
+                content = new Text("$ " + userMessage.getContent());
+                content.setFill(Color.WHITE);
+            }
+
+            case INTERPRETER_MESSAGE -> {
+                System.out.println(userMessage.getContent());
+                content = new Text(userMessage.getContent());
+                content.setFill(Color.TOMATO);
+            }
+
+            case NONE -> {
+                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
+                date.setFill(Color.LIGHTSLATEGREY);
+
+                user = new Text(userMessage.getUser() + ": ");
+                user.setFill(Color.GREY);
+
+                content = new Text(userMessage.getContent());
+                content.setFill(Color.GREY);
+            }
+        }
+
+        TextFlow textFlow = new TextFlow();
+        if(!date.getText().isEmpty()) textFlow.getChildren().add(date);
+        if(!user.getText().isEmpty()) textFlow.getChildren().add(user);
+        if(!device.getText().isEmpty()) textFlow.getChildren().add(device);
+        textFlow.getChildren().add(content);
+
         textFlow.setPrefWidth(300);
 
         return textFlow;
@@ -228,15 +304,21 @@ public class MainWindow {
                 new BorderWidths(0, 0, 3, 0)
         )));
 
+        Text deviceName = new Text("No device");
+        Text devicePort = new Text();
+        try{
+            deviceName.setText(deviceManager.getDevices().get(0).getDeviceName());
+            devicePort.setText(deviceManager.getDevices().get(0).getPortName());
+        } catch (IndexOutOfBoundsException e){
+            logger.error(e.getMessage());
+        }
 
-        Text deviceName = new Text(deviceManager.getDevices().get(0).getDeviceName());
         deviceName.setFont(new Font(25));
         deviceName.setTextAlignment(TextAlignment.CENTER);
         deviceName.setFill(Paint.valueOf("white"));
         deviceNameStackPane.getChildren().add(deviceName);
         deviceBox.getChildren().add(deviceNameStackPane);
 
-        Text devicePort = new Text(deviceManager.getDevices().get(0).getPortName());
         devicePort.setFont(new Font(15));
         devicePort.setTextAlignment(TextAlignment.LEFT);
         devicePort.setFill(Paint.valueOf("white"));
@@ -257,8 +339,35 @@ public class MainWindow {
 
     private ScrollPane generateDeviceLogList(){
         VBox messages = new VBox();
+        // todo: temp solution to get rid of a white strip on a device log list when there are no logs
+        Pane cell = new Pane();
+        cell.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
+
+        Text content = new Text("");
+        content.setWrappingWidth(250);
+        content.setFill(Paint.valueOf("white"));
+
+        Text dateText = new Text("");
+        dateText.setFill(Paint.valueOf("white"));
+        StackPane date = new StackPane(dateText);
+        StackPane.setAlignment(dateText, Pos.CENTER_RIGHT);
+
+        VBox contentVBox = new VBox(content, date);
+        contentVBox.setPadding(new Insets(10, 10, 0, 10));
+        contentVBox.prefWidthProperty().bind(cell.widthProperty());
+        cell.getChildren().add(contentVBox);
+
+        messages.getChildren().add(new Pane(cell));
+
+        // todo: end of temp solution
+
+        try{
+            messages.getChildren().addAll(generateReceivedCommandsList(deviceManager.getDevice(0)));
+        } catch (IndexOutOfBoundsException e){
+            logger.error(e.getMessage());
+        }
+
         messages.setSpacing(10);
-        messages.getChildren().addAll(generateReceivedCommandsList(deviceManager.getDevice(0)));
         messages.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
 //        messages.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(3))));
 

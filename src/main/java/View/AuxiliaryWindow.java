@@ -6,7 +6,10 @@ import Device.ReceivedMessage;
 import State.DeviceState;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
+import StreamingService.MessageType;
 import StreamingService.UserMessage;
+import Utils.Publisher;
+import Utils.Subscriber;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
@@ -25,13 +28,18 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Date;
 
-public class AuxiliaryWindow {
+public class AuxiliaryWindow implements Publisher {
+    private static final Logger logger = LoggerFactory.getLogger(AuxiliaryWindow.class);
     private final Stage stage;
     private final DeviceManager deviceManager;
     private final ChatManager chatManager;
+    private final ArrayList<Subscriber<UserMessage>> receivedMessageSubscriber = new ArrayList<>();
 
     public AuxiliaryWindow(DeviceManager deviceManager, ChatManager chatManager) {
         this.deviceManager = deviceManager;
@@ -85,7 +93,9 @@ public class AuxiliaryWindow {
         for(int i = 0; i < deviceManager.getDevices().size(); i++){
             int finalI = i;
             Button deviceButton = new Button(deviceManager.getDevice(i).getDeviceName());
-            deviceButton.setOnAction(event -> deviceManager.selectedDeviceIndex.set(finalI));
+            deviceButton.setOnAction(event -> {
+                deviceManager.selectedDeviceIndex.set(finalI);
+            });
             devicesHBox.getChildren().add(deviceButton);
         }
         devicesVBox.getChildren().add(devicesHBox);
@@ -96,7 +106,14 @@ public class AuxiliaryWindow {
         deviceNameText.textProperty().bindBidirectional(deviceManager.selectedDeviceIndex, new StringConverter<>() {
             @Override
             public String toString(Number object) {
-                return deviceManager.getDevices().get((Integer) object).getDeviceName();
+                try{
+                    String deviceName = deviceManager.getDevices().get((Integer) object).getDeviceName();
+                    return deviceName;
+                } catch (IndexOutOfBoundsException e){
+                    logger.error(e.getMessage());
+                }
+
+                return "No device";
             }
 
             @Override
@@ -151,6 +168,7 @@ public class AuxiliaryWindow {
 
         deviceManager.selectedDeviceIndex.addListener((observable, oldValue, newValue) -> {
             deviceCommandOutput.setText(generateDeviceCommandOutputText(deviceManager.getDeviceState((Integer) newValue)));
+            deviceManager.changeSelectedDevice((Integer) newValue);
         });
 
         for(Device device:deviceManager.getDevices()){
@@ -191,8 +209,10 @@ public class AuxiliaryWindow {
 
     private String generateDeviceCommandOutputText(DeviceState deviceState){
         String output = "";
-        for(int i = deviceState.receivedMessages.size() - 1; i >= 0; i--){
-            output = output.concat(deviceState.receivedMessages.get(i).getMessage()).concat("\n");
+        if(deviceState != null){
+            for(int i = deviceState.receivedMessages.size() - 1; i >= 0; i--){
+                output = output.concat(deviceState.receivedMessages.get(i).getMessage()).concat("\n");
+            }
         }
 
         return output;
@@ -222,7 +242,9 @@ public class AuxiliaryWindow {
             if(event.getCode() == KeyCode.ENTER){
                 if(!chatInputTextField.getText().isEmpty()){
 //                    chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-                    chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
+//                    chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
+//                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date())));
+                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
                     chatInputTextField.setText("");
                 }
             }
@@ -234,7 +256,8 @@ public class AuxiliaryWindow {
         sendChatInputButton.setOnAction(event -> {
             if(!chatInputTextField.getText().isEmpty()){
 //                chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-                chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
+//                chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
+                receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
                 chatInputTextField.setText("");
             }
         });
@@ -252,5 +275,15 @@ public class AuxiliaryWindow {
         usersVBox.getChildren().add(title);
 
         return usersVBox;
+    }
+
+    @Override
+    public void addSubscriber(Subscriber subscriber) {
+        receivedMessageSubscriber.add(subscriber);
+    }
+
+    @Override
+    public void removeSubscriber(Subscriber subscriber) {
+        receivedMessageSubscriber.remove(subscriber);
     }
 }

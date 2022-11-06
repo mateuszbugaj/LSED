@@ -1,18 +1,37 @@
 package Device;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.function.Supplier;
 
 public class SerialCom {
-    private final SerialPort serialPort;
+    private SerialPort serialPort;
 
-    public SerialCom(SerialPort serialPort, Integer baudrate) {
-        this.serialPort = serialPort;
+    public SerialCom(String serialPortName, Integer baudRate) throws SerialPortNotFoundException {
+        if(serialPortName == null){
+            return;
+        }
+
+        this.serialPort = Arrays
+                .stream(SerialPort.getCommPorts())
+                .filter(i -> i.getSystemPortName().contains(serialPortName))
+                .findFirst()
+                .orElseThrow(new Supplier<SerialPortNotFoundException>() {
+                    @Override
+                    public SerialPortNotFoundException get() {
+                        return new SerialPortNotFoundException(serialPortName);
+                    }
+                });
 
         try {
-            serialPort.setBaudRate(baudrate);
+            serialPort.setBaudRate(baudRate);
             serialPort.openPort();
 
             serialPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
@@ -27,6 +46,12 @@ public class SerialCom {
         }
     }
 
+    public void addDataListener(SerialPortDataListener listener){
+        if(serialPort != null){
+            serialPort.addDataListener(listener);
+        }
+    }
+
     public void sendMessage(String message) throws IOException {
         if(message == null || message.isEmpty()){
             System.out.println("Cannot send empty message to the robot!");
@@ -37,43 +62,3 @@ public class SerialCom {
         }
     }
 }
-
-//class SerialComEventHandler implements SerialPortDataListener {
-//    private final int CUTOFF_ASCII = 10; // Line feed character
-//    private String connectedMessage = "";
-//    private final ArrayList<Subscriber> subscribers;
-//
-//    public SerialComEventHandler(ArrayList<Subscriber> subscribers) {
-//        this.subscribers = subscribers;
-//    }
-//
-//    @Override
-//    public int getListeningEvents() {
-//        return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-//    }
-//
-//    @Override
-//    public void serialEvent(SerialPortEvent serialPortEvent) {
-//        SerialPort serialPort = serialPortEvent.getSerialPort();
-//        String buffer = getBuffer(serialPort);
-//        connectedMessage = connectedMessage.concat(buffer);
-//
-//        if((connectedMessage.indexOf(CUTOFF_ASCII) + 1) > 0) {
-//            String outputString = connectedMessage
-//                    .substring(0, connectedMessage.indexOf(CUTOFF_ASCII) + 1)
-//                    .replace("\n", "");
-//
-//            connectedMessage = connectedMessage.substring(connectedMessage.indexOf(CUTOFF_ASCII) + 1);
-//            System.out.println("Got: " + outputString);
-//            subscribers.forEach(s -> s.update(outputString));
-//        }
-//    }
-//
-//    protected String getBuffer(SerialPort serialPort){
-//        int bytesAvailable = serialPort.bytesAvailable();
-//        byte[] buffer = new byte[bytesAvailable];
-//        serialPort.readBytes(buffer, bytesAvailable);
-//
-//        return new String(buffer);
-//    }
-//}
