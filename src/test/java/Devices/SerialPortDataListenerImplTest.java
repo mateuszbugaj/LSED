@@ -1,19 +1,21 @@
-package Device;
+package Devices;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class SerialPortDataListenerImplTest {
     SerialPortDataListenerImpl dataListener;
-    Device device;
+    ExternalDevice device;
 
     @BeforeEach
     public void setup() throws Throwable {
-        device = new Device("src/test/resources/exampleDeviceMinimal.yaml");
+        device = new ExternalDevice("dev1", new SerialCom("port1", 9600), List.of(), List.of());
         dataListener = new SerialPortDataListenerImpl(device);
     }
 

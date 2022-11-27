@@ -16,14 +16,12 @@ import java.util.Map;
 public class Chat implements Publisher {
     private static final Logger logger = LoggerFactory.getLogger(Chat.class);
     private final String chatName;
-    private ChatService service; // todo: add abstraction layer, different services like zoom
-    private final String configFile; // todo: Path type?
+    private ChatService service;
     private final ArrayList<UserMessage> receivedMessages = new ArrayList<>(); // Chat equivalent of the log message received from the device
     private final ArrayList<Subscriber<UserMessage>> receivedMessageSubscriber = new ArrayList<>();
 
 
     public Chat(String configFile) throws FileNotFoundException {
-        this.configFile = configFile;
         logger.info("Configuring chat from file: " + configFile);
 
         Yaml yaml = new Yaml();

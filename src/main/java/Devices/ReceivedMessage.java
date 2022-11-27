@@ -1,8 +1,7 @@
-package Device;
+package Devices;
 
 import java.util.Date;
 
-// todo: get better name to better indicate that there is more metadata than just a message
 public class ReceivedMessage {
     private final String message;
     private final Date timestamp;

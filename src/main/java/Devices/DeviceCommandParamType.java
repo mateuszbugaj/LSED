@@ -1,4 +1,4 @@
-package Device;
+package Devices;
 
 public enum DeviceCommandParamType {
     String,

@@ -1,79 +1,46 @@
-package Device;
+package Devices;
 
 import Interpreter.Interpreter;
 import Utils.Subscriber;
 import View.Camera;
 import Utils.Publisher;
-import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
-import com.fazecast.jSerialComm.SerialPortTimeoutException;
-import com.github.sarxos.webcam.Webcam;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-public class Device implements Publisher {
-    private static final Logger logger = LoggerFactory.getLogger(Device.class);
+public class ExternalDevice implements Device, Publisher {
+    private static final Logger logger = LoggerFactory.getLogger(ExternalDevice.class);
     private final String deviceName;
-    private final String portName;
     private final SerialCom serialCom;
-    private final String configFile; // todo: Path type?
     private final ArrayList<ReceivedMessage> receivedMessages = new ArrayList<>();
     private final ArrayList<Subscriber<ReceivedMessage>> receivedMessageSubscriber = new ArrayList<>();
-    private final ArrayList<Camera> cameras = new ArrayList<>();
-    private final ArrayList<DeviceCommand> deviceCommands = new ArrayList<>();
+    private final List<Camera> cameras;
+    private Camera selectedCamera;
+    private final List<DeviceCommand> deviceCommands;
     private final Stack<String> deviceInstructions = new Stack<>();
     private Boolean waitingForConformation = false;
-    private Integer timeoutTimer = 100; // sec
-    private Thread deviceThread;
+    private final Integer timeoutTimer = 100; // sec
+    private final Thread deviceThread;
 
-    public Device(String configFile) throws Throwable {
-        this.configFile = configFile;
-        logger.info("Configuring device from file: " + configFile);
+    public ExternalDevice(String deviceName, SerialCom serialCom, List<Camera> cameras, List<DeviceCommand> commands){
+        this.deviceName = deviceName;
+        this.serialCom = serialCom;
+        this.cameras = cameras;
+        this.deviceCommands = commands;
 
-        Yaml yaml = new Yaml();
-        Map<String, Object> data = yaml.load(new FileReader(configFile));
-
-        deviceName = (String) data.get("name");
-        logger.debug("Device name: " + deviceName);
-
-        portName = data.get("portName") == null ? null : (String) data.get("portName");
-        logger.debug("Port name: " + portName);
-
-        Integer baudRate = (Integer) (data.get("baudRate") == null ? DeviceConfig.DEFAULT_BAUD_RATE : data.get("baudRate"));
-        logger.debug("Baud rate: " + baudRate);
-
-        ArrayList<String> cameraNames = data.get("cameras") == null ? new ArrayList<>() : (ArrayList<String>) data.get("cameras");
-        logger.debug("Device cameras: " + cameraNames.toString());
-
-        for(String cameraName: cameraNames){
-            logger.debug("Adding camera " + cameraName);
-            Webcam webcam = Webcam.getWebcams().stream().filter(i -> i.getName().contains("/dev/" + cameraName)).findFirst().orElse(null);
-            if(webcam != null){
-                Camera camera = new Camera(webcam);
-                camera.start();
-                cameras.add(camera);
-            } else {
-                logger.error("Camera " +cameraName + " not found");
-            }
+        if(cameras.size() > 0){
+            selectedCamera = cameras.get(0);
+        } else {
+            selectedCamera = new Camera("No cameras", "");
         }
 
-        Object commandsObject = data.get("commands");
-        if(commandsObject != null){
-            ArrayList<Map<String, Object>> commands = (ArrayList<Map<String, Object>>) commandsObject;
-            for(Map<String, Object> command: commands){
-                deviceCommands.add(Interpreter.buildCommand(command));
-            }
-        }
-
-        serialCom = new SerialCom(portName, baudRate);
         serialCom.addDataListener(new SerialPortDataListenerImpl(this));
 
         deviceThread = new Thread(new Runnable() {
@@ -105,6 +72,7 @@ public class Device implements Publisher {
     }
 
     // todo: temp, should not be public
+    @Override
     public void receiveMessage(ReceivedMessage receivedMessage){
         logger.debug("Received message: " + receivedMessage.getMessage());
         receivedMessages.add(receivedMessage); // todo: is this list even used?
@@ -116,12 +84,13 @@ public class Device implements Publisher {
         receivedMessageSubscriber.forEach(s -> s.update(receivedMessage));
     }
 
-    public String getDeviceName(){
+    @Override
+    public String getName(){
         return deviceName;
     }
 
     public String getPortName(){
-        return portName;
+        return serialCom.getPortName();
     }
 
     public void sendMessage(String message) throws IOException {
@@ -133,16 +102,47 @@ public class Device implements Publisher {
         return receivedMessages;
     }
 
-    public ArrayList<Camera> getCameras() {
+    public List<Camera> getCameras() {
         return cameras;
     }
 
-    public ArrayList<DeviceCommand> getDeviceCommands() {
+    public List<DeviceCommand> getCommands() {
         return deviceCommands;
     }
 
-    public void addDeviceInstruction(String instruction){
+    @Override
+    public void addInstruction(String instruction){
         deviceInstructions.push(instruction);
+    }
+
+    public List<String> getDeviceInstructions() {
+        return new ArrayList<>(deviceInstructions);
+    }
+
+    public Camera changeCamera(String cameraName) throws Throwable {
+        logger.debug("Changing camera to " + cameraName);
+        Camera camera = cameras
+                .stream()
+                .filter(i -> i.getName().equals(cameraName))
+                .findAny()
+                .orElseThrow((Supplier<Throwable>) () -> new RuntimeException("No camera with name " + cameraName + " found"));
+
+        selectedCamera = camera;
+        return camera;
+    }
+
+    public Camera changeCamera(int cameraId) throws Throwable {
+        try{
+            Camera camera = cameras.get(cameraId);
+            selectedCamera = camera;
+            return camera;
+        } catch (IndexOutOfBoundsException e){
+            throw new Throwable("No camera with id " + cameraId + " found");
+        }
+    }
+
+    public Camera getSelectedCamera() {
+        return selectedCamera;
     }
 
     @Override
@@ -153,5 +153,15 @@ public class Device implements Publisher {
     @Override
     public void removeSubscriber(Subscriber subscriber) {
         receivedMessageSubscriber.remove(subscriber);
+    }
+
+    @Override
+    public String toString() {
+        return "ExternalDevice{" +
+                "deviceName='" + deviceName + '\'' +
+                ", serialCom=" + serialCom +
+                ", cameras=" + cameras +
+                ", deviceCommands=" + deviceCommands +
+                '}';
     }
 }

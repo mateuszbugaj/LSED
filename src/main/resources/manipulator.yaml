@@ -1,16 +1,92 @@
 # Device 1
 name: 'Manipulator'
-portName: 'ttyUSB1'
-baudRate: 9600
+portName: ttyUSB1
+portBaudRate: 9600
 cameras:
-  - 'video4'
-  - 'video2'
-
-
-logFile: 'src/main/resources/device1.log'
-
-# This probably should be in different format than txt
-# File with initial commands (like homing for cnc)
-# This could be a list of scenarios, each in different file
-inputFile: src/main/resources/device1InputTest1.txt
-commandConfirmation: done
+  - name: "View1"
+    portName: "/dev/video0"
+  - name: "View2"
+    portName: "/dev/video2"
+  - name: "View3"
+    portName: "/dev/video4"
+commands:
+  - name: "Move Relative"
+    description: "Move device by distance of millimeters."
+    prefix: "moveBy"
+    devicePrefix: "mv"
+    params:
+      - name: "XAxisDistance"
+        type: Integer
+        range: [-100, 100]
+      - name: "YAxisDistance"
+        type: Integer
+        range: [-100, 100]
+        optional: true
+        predefined: 0
+      - name: "ZAxisDistance"
+        type: Integer
+        range: [-100, 100]
+        optional: true
+        predefined: 0
+  - name: "Position 1"
+    description: "Move to the Position 1 one axis at the time."
+    prefix: "Position_1"
+    events: [
+      "mv 90 0 0",
+      "mv 0 -50 0",
+      "gr 100",
+      "mv 0 0 -40",
+      "gr 50"]
+  - name: "Position 2"
+    description: "Move to the Position 2 one axis at the time."
+    prefix: "Position_2"
+    events: [
+      "mv 0 0 40",
+      "mv 0 50 0",
+      "mv -90 0 0",
+      "mv 0 0 -40",
+      "gr 100",
+      "mv 0 0 40"]
+  - name: "Position 3"
+    description: "Move to the Position 3 one axis at the time."
+    prefix: "Position_3"
+    events: [
+      "mv 0 0 -40",
+      "gr 50",
+      "mv 0 0 40",
+      "mv 90 0 0",
+      "mv 0 -50 0",
+      "mv 0 0 -40",
+      "gr 100" ]
+  - name: "Position 4"
+    description: "Move to the Position 4 one axis at the time."
+    prefix: "Position_4"
+    events: [
+      "mv 0 0 40",
+      "mv 0 50 0",
+      "mv -90 0 0"]
+  - name: "Scenario 1"
+    description: "Perform scenario number 1."
+    prefix: "Scenario_1"
+    events: [
+      "mv 90 0 0",
+      "mv 0 -50 0",
+      "gr 100",
+      "mv 0 0 -40",
+      "gr 50",
+      "mv 0 0 40",
+      "mv 0 50 0",
+      "mv -90 0 0",
+      "mv 0 0 -40",
+      "gr 100",
+      "mv 0 0 40",
+      "mv 0 0 -40",
+      "gr 50",
+      "mv 0 0 40",
+      "mv 90 0 0",
+      "mv 0 -50 0",
+      "mv 0 0 -40",
+      "gr 100" ,
+      "mv 0 0 40",
+      "mv 0 50 0",
+      "mv -90 0 0"]

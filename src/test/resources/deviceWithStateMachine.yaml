@@ -1,0 +1,28 @@
+# Example State Machine Device with Commands
+name: "Example State Machine"
+initialState: "Start"
+commands:
+  - name: "Move Relative"
+    description: "Move device by distance of millimeters."
+    prefix: "moveBy"
+    params:
+      - name: "XAxisDistance"
+        type: Integer
+      - name: "YAxisDistance"
+        type: Integer
+        optional: true
+        default: 0
+      - name: "ZAxisDistance"
+        type: Integer
+        optional: true
+        default: 0
+    devicePrefix: "mv"
+  - name: "Get A"
+    description: "Move and grab the item A. Then return to the Start position."
+    prefix: "GetA"
+    scenario: [
+      "mvto 100 0 0",
+      "mvto 100 50 0",
+      "mvto 100 50 20"]
+    stateAfter: "Got A"
+    statesBefore: ["Start"]

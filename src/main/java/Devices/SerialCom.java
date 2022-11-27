@@ -1,24 +1,27 @@
-package Device;
+package Devices;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.function.Supplier;
 
 public class SerialCom {
+    private static Logger logger = LoggerFactory.getLogger(SerialCom.class);
     private SerialPort serialPort;
+    private String portName;
 
     public SerialCom(String serialPortName, Integer baudRate) throws SerialPortNotFoundException {
-        if(serialPortName == null){
+        if(serialPortName == null){ // todo: is this check necessary? It is handy for tests
             return;
         }
+        logger.debug("Creating SerialCom for port: " + serialPortName);
 
+        this.portName = serialPortName;
         this.serialPort = Arrays
                 .stream(SerialPort.getCommPorts())
                 .filter(i -> i.getSystemPortName().contains(serialPortName))
@@ -44,6 +47,10 @@ public class SerialCom {
         } catch (NullPointerException e){
             System.out.println("Serial not selected");
         }
+    }
+
+    public String getPortName() {
+        return portName;
     }
 
     public void addDataListener(SerialPortDataListener listener){

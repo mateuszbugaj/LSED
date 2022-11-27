@@ -1,6 +1,4 @@
-package Device;
-
-import com.fazecast.jSerialComm.SerialPort;
+package Devices;
 
 public class SerialPortNotFoundException extends Exception{
     public SerialPortNotFoundException(String serialPortName){

@@ -1,11 +1,11 @@
 package View;
 
-import Device.Device;
-import Device.DeviceManager;
-import Device.ReceivedMessage;
+import Devices.Device;
+import Devices.ExternalDevice;
+import Devices.DeviceManager;
+import Devices.ReceivedMessage;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
-import StreamingService.MessageType;
 import StreamingService.UserMessage;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -16,7 +16,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -72,7 +71,7 @@ public class MainWindow {
         viewBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
         viewBox.setPadding(new Insets(0, 0, 10, 0));
 
-        Device device;
+        ExternalDevice device;
         ArrayList<Camera> cameras = new ArrayList<>();
         Pane mainFramePane = new Pane();
         try{
@@ -90,19 +89,21 @@ public class MainWindow {
 
         deviceBorderPane.setCenter(viewBox);
 
+
         deviceManager.selectedDeviceIndex.addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                Device device = deviceManager.getDevice((int) newValue);
-                ArrayList<Camera> cameras = device.getCameras();
+                if(newValue.intValue() == -1) return;
+                ExternalDevice device = deviceManager.getDevice((int) newValue);
+                Camera deviceSelectedCamera = device.getSelectedCamera();
 
                 mainFramePane.getChildren().clear();
-                mainFramePane.getChildren().add(cameras.get(0).getFrameView());
+                mainFramePane.getChildren().add(deviceSelectedCamera.getFrameView());
 
-                cameras.get(0).getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
+                deviceSelectedCamera.getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
 
                 viewBox.setCenter(mainFramePane);
-                viewBox.setBottom(generateThumbnails(cameras));
+                viewBox.setBottom(generateThumbnails(device.getCameras()));
 
                 deviceBorderPane.setCenter(viewBox);
             }
@@ -232,7 +233,7 @@ public class MainWindow {
                 if(userMessage.getTargetDevice() == null){
                     device = new Text("/");
                 } else {
-                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
+                    device = new Text("/" + userMessage.getTargetDevice().getName());
                 }
                 device.setFill(Color.POWDERBLUE);
 
@@ -260,7 +261,6 @@ public class MainWindow {
             }
 
             case INTERPRETER_MESSAGE -> {
-                System.out.println(userMessage.getContent());
                 content = new Text(userMessage.getContent());
                 content.setFill(Color.TOMATO);
             }
@@ -307,8 +307,8 @@ public class MainWindow {
         Text deviceName = new Text("No device");
         Text devicePort = new Text();
         try{
-            deviceName.setText(deviceManager.getDevices().get(0).getDeviceName());
-            devicePort.setText(deviceManager.getDevices().get(0).getPortName());
+            deviceName.setText(deviceManager.getDevices().get(0).getName());
+//            devicePort.setText(deviceManager.getDevices().get(0).getPortName());
         } catch (IndexOutOfBoundsException e){
             logger.error(e.getMessage());
         }
@@ -327,8 +327,9 @@ public class MainWindow {
         deviceManager.selectedDeviceIndex.addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                Device device = deviceManager.getDevice((int) newValue);
-                deviceName.setText(device.getDeviceName());
+                if(newValue.intValue() == -1) return;
+                ExternalDevice device = deviceManager.getDevice((int) newValue);
+                deviceName.setText(device.getName());
                 devicePort.setText(device.getPortName());
             }
         });
@@ -371,7 +372,7 @@ public class MainWindow {
         messages.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
 //        messages.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(3))));
 
-        for(Device device:deviceManager.getDevices()){
+        for(ExternalDevice device:deviceManager.getDevices()){
             ListChangeListener<ReceivedMessage> listChangeListener = c -> {
                 if(device.equals(deviceManager.getDevice(deviceManager.selectedDeviceIndex.get()))){
                     messages.getChildren().clear();
@@ -383,6 +384,7 @@ public class MainWindow {
         }
 
         deviceManager.selectedDeviceIndex.addListener((observable, oldValue, newValue) -> {
+            if(newValue.intValue() == -1) return;
             messages.getChildren().clear();
             messages.getChildren().addAll(generateReceivedCommandsList(deviceManager.getDevice((int) newValue)));
         });
@@ -396,7 +398,7 @@ public class MainWindow {
         return scrollPane;
     }
 
-    private ArrayList<Pane> generateReceivedCommandsList(Device device){
+    private ArrayList<Pane> generateReceivedCommandsList(ExternalDevice device){
         ArrayList<Pane> panes = new ArrayList<>();
         SimpleDateFormat receivedMessageTimestampDateFormat = new SimpleDateFormat("HH:mm:ss:SSS"); //todo: this could be read from the config file for device
 
@@ -445,7 +447,7 @@ public class MainWindow {
             StackPane deviceTab = new StackPane();
             deviceTab.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0, 2, 0, 0))));
 //            deviceTab.setBackground(new Background(new BackgroundFill(Paint.valueOf("grey"), CornerRadii.EMPTY, Insets.EMPTY)));
-            Text deviceName = new Text(device.getDeviceName());
+            Text deviceName = new Text(device.getName());
             deviceName.setFill(Paint.valueOf("white"));
             StackPane.setAlignment(deviceName, Pos.CENTER);
             deviceTab.getChildren().add(deviceName);
@@ -461,6 +463,7 @@ public class MainWindow {
         deviceManager.selectedDeviceIndex.addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                if(newValue.intValue() == -1) return;
                 for(int i = 0; i < deviceHBox.getChildren().size(); i++){
                     Node n = deviceHBox.getChildren().get(i);
                     if(i == (int) newValue){

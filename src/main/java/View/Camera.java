@@ -12,20 +12,29 @@ import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 // The presenter class
 public class Camera {
+    private final String name;
+    private final String portName;
     private final Webcam webcam;
-    private final Task<Void> webcamTask;
+    private Task<Void> webcamTask; // todo: try to make it final
     private Thread thread;
     private final ImageView frameView;
 
-    public Camera(Webcam webcam) {
-        this.webcam = webcam;
-        frameView = new ImageView();
-        frameView.setUserData(webcam.getName());
+    public Camera(String name, String portName) {
+        this.name = name;
+        this.portName = portName;
+
+        webcam = Webcam.getWebcams().stream().filter(i -> i.getName().contains(portName)).findFirst().orElse(null); // todo: think how to notify about error when camera is null
+        frameView = new ImageView(); // todo: display some hardcoded image to indicate that the camera is missing
+        frameView.setUserData(name);
         frameView.setPreserveRatio(true);
+
+        if(webcam == null) return;
 
         // todo: Is FHD smaller than HD? HD causes problems with USB controller having too little memory but FHD doesn't.
 //        webcam.setCustomViewSizes(WebcamResolution.HD.getSize());
@@ -72,11 +81,21 @@ public class Camera {
         return webcam;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public String getPortName() {
+        return portName;
+    }
+
     public void stop(){
         webcamTask.cancel();
     }
 
     public void start(){
+        if(webcamTask == null) return;
+
         if(webcamTask.isRunning()){
             webcamTask.cancel();
         } else {
@@ -87,6 +106,14 @@ public class Camera {
         thread = new Thread(webcamTask);
         thread.setDaemon(true);
         thread.start();
+    }
+
+    @Override
+    public String toString() {
+        return "Camera{" +
+                "name='" + name + '\'' +
+                ", portName='" + portName + '\'' +
+                '}';
     }
 }
 

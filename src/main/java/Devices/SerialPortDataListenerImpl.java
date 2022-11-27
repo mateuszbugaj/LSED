@@ -1,4 +1,4 @@
-package Device;
+package Devices;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
@@ -6,18 +6,16 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Timestamp;
-import java.util.Arrays;
 import java.util.Date;
 
 public class SerialPortDataListenerImpl implements SerialPortDataListener {
     private final int CUTOFF_ASCII = '\r';
     private static final Logger logger = LoggerFactory.getLogger(SerialPortDataListenerImpl.class);
-    private final Device device;
+    private final ExternalDevice device;
     private String buffer = "";
     public String receivedMessage = ""; // todo: this should be mocked
 
-    public SerialPortDataListenerImpl(Device device) {
+    public SerialPortDataListenerImpl(ExternalDevice device) {
         this.device = device;
     }
 
@@ -39,7 +37,7 @@ public class SerialPortDataListenerImpl implements SerialPortDataListener {
             receivedMessage = new String(byteBuffer);
         }
 
-        logger.debug("Got data chunk: " + receivedMessage.replace("\r", "\\r").replace("\n", "\\n"));
+//        logger.debug("Got data chunk: " + receivedMessage.replace("\r", "\\r").replace("\n", "\\n")); // todo: fix this so it doesn't send every char
         if(receivedMessage.indexOf('\r') != -1){
             receivedMessage = buffer.concat(receivedMessage);
             buffer = "";

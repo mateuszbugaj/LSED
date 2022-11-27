@@ -1,35 +1,30 @@
 package StreamingService;
 
-import Device.Device;
-import Device.DeviceChangeSubscriber;
+import Devices.ExternalDevice;
+import Devices.DeviceChangeSubscriber;
 import Interpreter.Interpreter;
 import Utils.Publisher;
 import Utils.Subscriber;
 import State.ChatState;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 // ChatManager is equivalent to the DeviceManager
-public class ChatManager implements Subscriber<UserMessage>, DeviceChangeSubscriber {
+public class ChatManager implements Subscriber<UserMessage>, Publisher<UserMessage> {
     private static final Logger logger = LoggerFactory.getLogger(ChatManager.class);
     private final ArrayList<Chat> chats = new ArrayList<>();
-    private final Map<Chat, ChatState> chatStates = new HashMap<>(); // todo: this might not be used or needed
-//    private final ArrayList<ReceivedMessage> chatMessages = new ArrayList<>();
     private final ObservableList<UserMessage> chatMessages = FXCollections.observableArrayList();
-    private Device currentSelectedDevice;
+    private ArrayList<Subscriber<UserMessage>> userMessageSubscribers = new ArrayList<>();
 
     public void addChat(Chat chat){
         logger.info("Adding chat " + chat.getChatName());
         chats.add(chat);
-
-        ChatState chatState = new ChatState();
-//        chat.addSubscriber(chatState);
         chat.addSubscriber(this);
-        chatStates.put(chat, chatState);
 //
 //        // create complementary Device Send Command
 //        Command command = new Command(device);
@@ -58,35 +53,39 @@ public class ChatManager implements Subscriber<UserMessage>, DeviceChangeSubscri
     public void update(UserMessage userMessage) {
         logger.debug("Chat manager registered " + userMessage.getMessageType() + " : " + userMessage.getContent());
 
-        if(userMessage.getMessageType() == MessageType.NONE){
-            userMessage.setMessageType(MessageType.USER_MESSAGE);
-        }
+        // todo: something like a factory pattern to produce different subtypes of message like UserMessage, UserCommand, AdminMessage based on the content and the author. Keep it simple and short
 
-        if(userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE){
-            if(currentSelectedDevice != null){
-                userMessage.setTargetDevice(currentSelectedDevice);
-            }
-        }
-
-        if((userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE) && Interpreter.isCommand(userMessage)){
+        if(Interpreter.isCommand(userMessage)){
             userMessage.setMessageType(MessageType.USER_COMMAND);
+            userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
         }
+
+//        if(userMessage.getMessageType() == MessageType.NONE){
+//            userMessage.setMessageType(MessageType.USER_MESSAGE);
+//        }
+//
+////        if(userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE){
+////            if(currentSelectedDevice != null){
+////                // todo: the message could look like this: "/dev1 command parameter" "/microscope command parameter; command parameter" "/sys command parameter"
+////                userMessage.setTargetDevice(currentSelectedDevice);
+////            }
+////        }
+//
+//        if((userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE) && Interpreter.isCommand(userMessage)){
+//            userMessage.setMessageType(MessageType.USER_COMMAND);
+//            userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
+//        }
 
         chatMessages.add(userMessage);
-
-        try{
-            // todo: think how to act on commands meant for the system (to change device for example)
-            ArrayList<String> deviceInstructions = Interpreter.interpret(userMessage);
-            logger.debug("Received following deviceInstructions form Interpreter: " + deviceInstructions);
-            deviceInstructions.forEach(i -> currentSelectedDevice.addDeviceInstruction(i));
-        } catch (Throwable e){
-            chatMessages.add(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE));
-        }
     }
 
     @Override
-    public void update(Device newSelectedDevice) {
-        logger.debug("Current selected device updated: " + newSelectedDevice.getDeviceName());
-        currentSelectedDevice = newSelectedDevice;
+    public void addSubscriber(Subscriber<UserMessage> subscriber) {
+        userMessageSubscribers.add(subscriber);
+    }
+
+    @Override
+    public void removeSubscriber(Subscriber<UserMessage> subscriber) {
+        userMessageSubscribers.remove(subscriber);
     }
 }

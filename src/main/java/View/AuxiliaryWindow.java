@@ -1,8 +1,9 @@
 package View;
 
-import Device.Device;
-import Device.DeviceManager;
-import Device.ReceivedMessage;
+import Devices.Device;
+import Devices.ExternalDevice;
+import Devices.DeviceManager;
+import Devices.ReceivedMessage;
 import State.DeviceState;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
@@ -34,7 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class AuxiliaryWindow implements Publisher {
+public class AuxiliaryWindow implements Publisher<UserMessage> {
     private static final Logger logger = LoggerFactory.getLogger(AuxiliaryWindow.class);
     private final Stage stage;
     private final DeviceManager deviceManager;
@@ -92,7 +93,7 @@ public class AuxiliaryWindow implements Publisher {
         devicesHBox.setSpacing(5);
         for(int i = 0; i < deviceManager.getDevices().size(); i++){
             int finalI = i;
-            Button deviceButton = new Button(deviceManager.getDevice(i).getDeviceName());
+            Button deviceButton = new Button(deviceManager.getDevice(i).getName());
             deviceButton.setOnAction(event -> {
                 deviceManager.selectedDeviceIndex.set(finalI);
             });
@@ -107,7 +108,7 @@ public class AuxiliaryWindow implements Publisher {
             @Override
             public String toString(Number object) {
                 try{
-                    String deviceName = deviceManager.getDevices().get((Integer) object).getDeviceName();
+                    String deviceName = deviceManager.getDevices().get((Integer) object).getName();
                     return deviceName;
                 } catch (IndexOutOfBoundsException e){
                     logger.error(e.getMessage());
@@ -167,11 +168,12 @@ public class AuxiliaryWindow implements Publisher {
          */
 
         deviceManager.selectedDeviceIndex.addListener((observable, oldValue, newValue) -> {
+            if(newValue.intValue() == -1) return;
             deviceCommandOutput.setText(generateDeviceCommandOutputText(deviceManager.getDeviceState((Integer) newValue)));
             deviceManager.changeSelectedDevice((Integer) newValue);
         });
 
-        for(Device device:deviceManager.getDevices()){
+        for(ExternalDevice device:deviceManager.getDevices()){
             ListChangeListener<ReceivedMessage> listChangeListener = c -> {
                 if(device.equals(deviceManager.getDevice(deviceManager.selectedDeviceIndex.get()))){
                     deviceCommandOutput.setText(generateDeviceCommandOutputText(deviceManager.getDeviceState(device)));
@@ -278,12 +280,12 @@ public class AuxiliaryWindow implements Publisher {
     }
 
     @Override
-    public void addSubscriber(Subscriber subscriber) {
+    public void addSubscriber(Subscriber<UserMessage> subscriber) {
         receivedMessageSubscriber.add(subscriber);
     }
 
     @Override
-    public void removeSubscriber(Subscriber subscriber) {
+    public void removeSubscriber(Subscriber<UserMessage> subscriber) {
         receivedMessageSubscriber.remove(subscriber);
     }
 }

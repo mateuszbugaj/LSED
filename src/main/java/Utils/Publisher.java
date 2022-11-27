@@ -1,6 +1,6 @@
 package Utils;
 
-public interface Publisher {
-    void addSubscriber(Subscriber subscriber);
-    void removeSubscriber(Subscriber subscriber);
+public interface Publisher<T> {
+    void addSubscriber(Subscriber<T> subscriber);
+    void removeSubscriber(Subscriber<T> subscriber);
 }

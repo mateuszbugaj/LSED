@@ -1,6 +1,6 @@
 package State;
 
-import Device.ReceivedMessage;
+import Devices.ReceivedMessage;
 import Utils.Subscriber;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
