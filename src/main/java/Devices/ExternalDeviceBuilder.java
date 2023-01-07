@@ -19,6 +19,7 @@ public class ExternalDeviceBuilder {
     private ArrayList<DeviceCommand> commands = new ArrayList<>();
 //    private Integer timeoutTimer = 100; // sec
 //    private Thread deviceThread;
+    private String initialState;
 
     public ExternalDeviceBuilder setDeviceName(String deviceName){
         this.deviceName = deviceName;
@@ -32,6 +33,7 @@ public class ExternalDeviceBuilder {
     }
 
     public ExternalDeviceBuilder setCameras(List<CameraDTO> cameraDTOS){
+        if(cameraDTOS == null) return this;
 
         for(CameraDTO cameraDTO: cameraDTOS){
             usedCameras
@@ -61,12 +63,19 @@ public class ExternalDeviceBuilder {
         return this;
     }
 
+    public ExternalDeviceBuilder setInitialState(String state){
+        this.initialState = state;
+
+        return this;
+    }
+
     public ExternalDevice build(){
-        ExternalDevice device = new ExternalDevice(deviceName, serialCom, cameras, commands);
+        ExternalDevice device = new ExternalDevice(deviceName, serialCom, cameras, commands, initialState);
         deviceName = null;
         serialCom = null;
         cameras = new ArrayList<>();
         commands = new ArrayList<>();
+        initialState = null;
 
         return device;
     }

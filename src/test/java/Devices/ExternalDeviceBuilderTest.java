@@ -20,6 +20,7 @@ public class ExternalDeviceBuilderTest {
         externalDeviceDTO.setName("dev");
         externalDeviceDTO.setPortName("port");
         externalDeviceDTO.setPortBaudRate(1000);
+        externalDeviceDTO.setInitialState("home");
 
         CameraDTO cameraDTO = new CameraDTO();
         cameraDTO.setName("cam1");
@@ -40,6 +41,7 @@ public class ExternalDeviceBuilderTest {
                 .setSerialCom(externalDeviceDTO.getPortName(), externalDeviceDTO.getPortBaudRate())
                 .setCameras(externalDeviceDTO.getCameras())
                 .setCommands(externalDeviceDTO.getCommands())
+                .setInitialState(externalDeviceDTO.getInitialState())
                 .build();
 
         // Then
@@ -48,6 +50,7 @@ public class ExternalDeviceBuilderTest {
                 externalDeviceDTO.getCameras().stream().map(CameraDTO::getPortName).collect(Collectors.toList()),
                 device.getCameras().stream().map(Camera::getPortName).collect(Collectors.toList()));
 //        Assertions.assertEquals(externalDeviceDTO.getCommands().get(0).getName(), device.getDeviceCommands().get(0).getName());
+        Assertions.assertEquals(device.getCurrentState(), externalDeviceDTO.getInitialState());
 
     }
 

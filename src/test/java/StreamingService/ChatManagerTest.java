@@ -26,7 +26,7 @@ class ChatManagerTest {
 
         UserMessageSubscriberImpl messageSubscriber = new UserMessageSubscriberImpl();
         chatManager.addSubscriber(messageSubscriber);
-        chatManager.update(new UserMessage("User1", "/dev moveBy 10", new Date()));
+        chatManager.update(new UserMessage("User1", "!dev moveBy 10", new Date()));
         chatManager.update(new UserMessage("User1", "dev moveBy 10", new Date()));
 
         Assertions.assertEquals(MessageType.USER_COMMAND, messageSubscriber.userMessages.get(0).getMessageType());

@@ -33,6 +33,7 @@ public class ExternalDeviceBuilderDirector {
                 .setSerialCom(deviceDTO.getPortName(), deviceDTO.getPortBaudRate())
                 .setCameras(deviceDTO.getCameras())
                 .setCommands(deviceDTO.getCommands())
+                .setInitialState(deviceDTO.getInitialState())
                 .build();
     }
 }

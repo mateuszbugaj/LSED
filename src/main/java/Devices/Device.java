@@ -5,6 +5,7 @@ import java.util.List;
 public interface Device {
     void receiveMessage(ReceivedMessage receivedMessage);
     String getName();
-    void addInstruction(String instruction);
+    void addCommandToExecute(DeviceCommand command);
     List<DeviceCommand> getCommands();
+    String getCurrentState();
 }

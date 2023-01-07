@@ -15,7 +15,8 @@ class SerialPortDataListenerImplTest {
 
     @BeforeEach
     public void setup() throws Throwable {
-        device = new ExternalDevice("dev1", new SerialCom("port1", 9600), List.of(), List.of());
+//        device = new ExternalDevice("dev1", new SerialCom("port1", 9600), List.of(), List.of());
+        device = new ExternalDevice("dev1", new SerialCom(null, 9600), List.of(), List.of(), "start");
         dataListener = new SerialPortDataListenerImpl(device);
     }
 

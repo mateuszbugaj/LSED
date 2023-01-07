@@ -1,6 +1,7 @@
 name: "dev1"
 portName: "port1"
 portBaudRate: 1000
+initialState: "Start"
 cameras:
   - name: "cam1"
     portName: "/dev/cam1"
@@ -11,6 +12,8 @@ cameras:
 commands:
   - name: "Move Relative"
     description: "Move device by distance of millimeters."
+    requiredStates: [ "Home", "Position_1" ]
+    resultingState: "Moved"
     prefix: "moveBy"
     devicePrefix: "mv"
     params:
@@ -39,49 +42,18 @@ commands:
         range: [100]
         optional: true
     devicePrefix: "lgt"
+  - name: "Home Manipulator"
+    description: "Move Manipulator to its Home position in all axes."
+    requiredStates: ["Start", "Home", "Position_1", "Moved"]
+    resultingState: "Home"
+    prefix: "home"
+    devicePrefix: "G28"
   - name: "Position 1"
     description: "Move to the Position 1 one axis at the time."
+    requiredStates: ["Home"]
+    resultingState: "Position_1"
     prefix: "Position_1"
     events: [
       "mvto 100 0 0",
       "mvto 100 50 0",
       "mvto 100 50 20"]
-
-#  - name: "Move Relative"
-#    description: "Move device by distance of millimeters."
-#    prefix: "moveBy"
-#    params:
-#      - name: "XAxisDistance"
-#        type: Integer
-#        range: [-100, 100]
-#      - name: "YAxisDistance"
-#        type: Integer
-#        range: [-100, 100]
-#        optional: true
-#        default: 0
-#      - name: "ZAxisDistance"
-#        type: Integer
-#        range: [-100, 100]
-#        optional: true
-#        default: 0
-#    devicePrefix: "mv"
-#  - name: "Light Switch"
-#    description: "Switch bed light ON and OFF."
-#    prefix: "light"
-#    params:
-#      - name: "State"
-#        type: String
-#        values: ["on", "off"]
-#      - name: "Intensity"
-#        type: Integer
-#        range: [100]
-#        optional: true
-#    devicePrefix: "lgt"
-#  - name: "Position 1"
-#    description: "Move to the Position 1 one axis at the time."
-#    prefix: "Position 1"
-#    devicePrefix: ""
-#    scenario: [
-#      "mvto 100 0 0",
-#      "mvto 100 50 0",
-#      "mvto 100 50 20"]

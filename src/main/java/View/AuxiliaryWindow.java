@@ -1,10 +1,9 @@
 package View;
 
-import Devices.Device;
 import Devices.ExternalDevice;
 import Devices.DeviceManager;
 import Devices.ReceivedMessage;
-import State.DeviceState;
+import State.DeviceMediator;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
 import StreamingService.MessageType;
@@ -209,11 +208,11 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
         return devicesVBox;
     }
 
-    private String generateDeviceCommandOutputText(DeviceState deviceState){
+    private String generateDeviceCommandOutputText(DeviceMediator deviceMediator){
         String output = "";
-        if(deviceState != null){
-            for(int i = deviceState.receivedMessages.size() - 1; i >= 0; i--){
-                output = output.concat(deviceState.receivedMessages.get(i).getMessage()).concat("\n");
+        if(deviceMediator != null){
+            for(int i = deviceMediator.receivedMessages.size() - 1; i >= 0; i--){
+                output = output.concat(deviceMediator.receivedMessages.get(i).getMessage()).concat("\n");
             }
         }
 

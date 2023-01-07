@@ -1,9 +1,6 @@
 package View;
 
-import Devices.Device;
-import Devices.ExternalDevice;
-import Devices.DeviceManager;
-import Devices.ReceivedMessage;
+import Devices.*;
 import StreamingService.Chat;
 import StreamingService.ChatManager;
 import StreamingService.UserMessage;
@@ -11,6 +8,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -154,13 +152,78 @@ public class MainWindow {
 
     private VBox generateUserBox(){
         VBox userBox = new VBox();
-        userBox.setMinWidth(300);
+        int userBoxWidth = 300;
+        userBox.setMinWidth(userBoxWidth);
         userBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
         userBox.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(0, 3, 0, 0))));
         userBox.setPadding(new Insets(10));
         userBox.setSpacing(10);
 
         // Info about user in charge or current event ect.
+        // todo: Read this from the config file and add text wrapping
+
+        VBox titleVBox= new VBox();
+        titleVBox.setSpacing(10);
+        titleVBox.setPadding(new Insets(10));
+        titleVBox.setBorder(new Border(new BorderStroke(
+                Paint.valueOf("white"),
+                BorderStrokeStyle.SOLID,
+                new CornerRadii(5),
+                new BorderWidths(1, 1, 1, 1)
+        )));
+
+        StackPane titleTextStackPane = new StackPane();
+        Text title = new Text("LSED");
+        title.setFont(new Font(25));
+        title.setTextAlignment(TextAlignment.CENTER);
+        title.setFill(Paint.valueOf("white"));
+        titleTextStackPane.getChildren().add(title);
+
+        Text subTitle = new Text("Live Stream External Device");
+        subTitle.setFont(new Font(15));
+        subTitle.setFill(Paint.valueOf("white"));
+
+        titleVBox.getChildren().addAll(titleTextStackPane, subTitle);
+        userBox.getChildren().add(titleVBox);
+
+        // User in control and for how long
+        VBox userQueueVBox= new VBox();
+        userQueueVBox.setSpacing(10);
+        userQueueVBox.setPadding(new Insets(10, 0, 10, 0));
+        userQueueVBox.setBorder(new Border(new BorderStroke(
+                Paint.valueOf("white"),
+                BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY,
+                new BorderWidths(0, 0, 3, 0)
+        )));
+
+        Text userInControl = new Text("User1");
+        userInControl.setWrappingWidth(userBoxWidth);
+        userInControl.setFont(new Font(30));
+        userInControl.setFill(Paint.valueOf("green"));
+        userQueueVBox.getChildren().add(userInControl);
+
+        Text userInControlTimer = new Text("|##################----| 26:48");
+        userInControlTimer.setFont(new Font(15));
+        userInControlTimer.setFill(Paint.valueOf("green"));
+        userQueueVBox.getChildren().add(userInControlTimer);
+
+        //todo: implement
+        for(String user: List.of("User2 - 10:00", "User3 - 15:00", "User4 - 30:00", "User5 - 10:00", "And 8 others...")){
+            Text userControlQueue = new Text(user);
+            userControlQueue.setWrappingWidth(userBoxWidth);
+            userControlQueue.setFont(new Font(15));
+            userControlQueue.setFill(Paint.valueOf("white"));
+            userQueueVBox.getChildren().add(userControlQueue);
+        }
+
+        userBox.getChildren().add(userQueueVBox);
+
+        Text userControlTip = new Text("Type: \n'!sys get_control <time in minutes (max 30)>'");
+        userControlTip.setWrappingWidth(userBoxWidth);
+        userControlTip.setFont(new Font(12));
+        userControlTip.setFill(Paint.valueOf("grey"));
+        userQueueVBox.getChildren().add(userControlTip);
 
         // All user messages (or only valid commands?)
         VBox commands = new VBox();
@@ -237,6 +300,8 @@ public class MainWindow {
                 }
                 device.setFill(Color.POWDERBLUE);
 
+                String contentSubstring = userMessage.getContent();
+                System.out.println(contentSubstring);
                 content = new Text(" $ " + userMessage.getContent());
                 content.setFill(Color.WHITE);
             }
@@ -296,19 +361,24 @@ public class MainWindow {
         deviceBox.setPadding(new Insets(10));
         deviceBox.setSpacing(10);
 
-        StackPane deviceNameStackPane = new StackPane();
-        deviceNameStackPane.setBorder(new Border(new BorderStroke(
+        VBox deviceInfoVBox = new VBox();
+        deviceInfoVBox.setSpacing(5);
+        deviceInfoVBox.setPadding(new Insets(10, 0, 10, 0));
+        deviceInfoVBox.setBorder(new Border(new BorderStroke(
                 Paint.valueOf("white"),
                 BorderStrokeStyle.SOLID,
                 CornerRadii.EMPTY,
                 new BorderWidths(0, 0, 3, 0)
         )));
+        deviceBox.getChildren().add(deviceInfoVBox);
 
         Text deviceName = new Text("No device");
         Text devicePort = new Text();
+        Text deviceStateLabel = new Text();
         try{
             deviceName.setText(deviceManager.getDevices().get(0).getName());
-//            devicePort.setText(deviceManager.getDevices().get(0).getPortName());
+            devicePort.setText("Serial port: " + deviceManager.getDevices().get(0).getPortName());
+            deviceStateLabel.setText("Current state: " + deviceManager.getDevices().get(0).getCurrentState());
         } catch (IndexOutOfBoundsException e){
             logger.error(e.getMessage());
         }
@@ -316,13 +386,46 @@ public class MainWindow {
         deviceName.setFont(new Font(25));
         deviceName.setTextAlignment(TextAlignment.CENTER);
         deviceName.setFill(Paint.valueOf("white"));
-        deviceNameStackPane.getChildren().add(deviceName);
-        deviceBox.getChildren().add(deviceNameStackPane);
+        deviceInfoVBox.getChildren().add(deviceName);
 
-        devicePort.setFont(new Font(15));
+        deviceStateLabel.setFont(new Font(15));
+        deviceStateLabel.setTextAlignment(TextAlignment.LEFT);
+        deviceStateLabel.setFill(Paint.valueOf("white"));
+        deviceInfoVBox.getChildren().add(deviceStateLabel);
+
+        for(ExternalDevice device:deviceManager.getDevices()){
+            ChangeListener<DeviceState> deviceStateChangeListener = (observableValue, deviceState, t1) -> {
+                if (device.equals(deviceManager.getDevice(deviceManager.selectedDeviceIndex.get()))) {
+                    if(!t1.getState().isBlank()){
+                        deviceStateLabel.setText("Current state: " + t1.getState());
+                    }
+                }
+            };
+            deviceManager.getDeviceState(device).currentState.addListener(deviceStateChangeListener);
+        }
+
+        devicePort.setFont(new Font(12));
         devicePort.setTextAlignment(TextAlignment.LEFT);
-        devicePort.setFill(Paint.valueOf("white"));
-        deviceBox.getChildren().add(devicePort);
+        devicePort.setFill(Paint.valueOf("grey"));
+        deviceInfoVBox.getChildren().add(devicePort);
+
+        // Show device instruction set
+        Text instructionSetLabel = new Text("Available commands:");
+        instructionSetLabel.setFont(new Font(15));
+        instructionSetLabel.setFill(Paint.valueOf("white"));
+        deviceInfoVBox.getChildren().add(instructionSetLabel);
+
+        VBox deviceInstructionSetVBox = new VBox();
+        deviceInstructionSetVBox.getChildren().add(generateDeviceInstructionSet());
+        deviceInfoVBox.getChildren().add(deviceInstructionSetVBox);
+
+
+        // todo: remove instructions before changing device
+
+        Text instructionSetTip = new Text("Type\n'!<device> <command> help' to learn more");
+        instructionSetTip.setFont(new Font(12));
+        instructionSetTip.setFill(Paint.valueOf("grey"));
+        deviceInfoVBox.getChildren().add(instructionSetTip);
 
         deviceManager.selectedDeviceIndex.addListener(new ChangeListener<Number>() {
             @Override
@@ -330,12 +433,37 @@ public class MainWindow {
                 if(newValue.intValue() == -1) return;
                 ExternalDevice device = deviceManager.getDevice((int) newValue);
                 deviceName.setText(device.getName());
-                devicePort.setText(device.getPortName());
+                devicePort.setText("Serial port: " + device.getPortName());
+                deviceStateLabel.setText("Current state: " + device.getCurrentState());
+
+                deviceInstructionSetVBox.getChildren().clear();
+                deviceInstructionSetVBox.getChildren().add(generateDeviceInstructionSet());
             }
         });
 
         deviceBox.getChildren().add(generateDeviceLogList());
         return deviceBox;
+    }
+
+    private VBox generateDeviceInstructionSet(){
+        VBox instructions = new VBox();
+        instructions.setSpacing(5);
+
+        try{
+            List<DeviceCommand> commands = deviceManager.getDevices().get(deviceManager.selectedDeviceIndex.get()).getCommands();
+            for(DeviceCommand command:commands){
+                Text instructionLabel = new Text(command.getPrefix() + " - " + command.getName());
+                instructionLabel.setFont(new Font(12));
+                instructionLabel.setFill(Paint.valueOf("white"));
+
+                instructions.getChildren().add(instructionLabel);
+            }
+
+        }catch (IndexOutOfBoundsException e){
+            logger.error(e.getMessage());
+        }
+
+        return instructions;
     }
 
     private ScrollPane generateDeviceLogList(){
@@ -410,19 +538,21 @@ public class MainWindow {
 
         for (ReceivedMessage receivedMessage : reversedReceivedMessages) {
             Pane cell = new Pane();
-            cell.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
+//            cell.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
+            cell.setBorder(new Border(new BorderStroke(Paint.valueOf("grey"), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0, 0, 1, 0))));
 
             Text content = new Text(receivedMessage.getMessage());
             content.setWrappingWidth(250);
             content.setFill(Paint.valueOf("white"));
 
             Text dateText = new Text(receivedMessageTimestampDateFormat.format(receivedMessage.getTimestamp()));
-            dateText.setFill(Paint.valueOf("white"));
+            dateText.setFill(Paint.valueOf("grey"));
             StackPane date = new StackPane(dateText);
-            StackPane.setAlignment(dateText, Pos.CENTER_RIGHT);
+//            StackPane.setAlignment(dateText, Pos.CENTER_RIGHT);
+            StackPane.setAlignment(dateText, Pos.CENTER_LEFT);
 
             VBox contentVBox = new VBox(content, date);
-            contentVBox.setPadding(new Insets(10, 10, 0, 10));
+            contentVBox.setPadding(new Insets(0, 20, 0, 0));
             contentVBox.prefWidthProperty().bind(cell.widthProperty());
             cell.getChildren().add(contentVBox);
 

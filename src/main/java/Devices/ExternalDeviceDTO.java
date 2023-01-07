@@ -12,8 +12,8 @@ public class ExternalDeviceDTO implements Comparable<ExternalDeviceDTO>{
     private String portName;
     private Integer portBaudRate = 9600;
     private List<CameraDTO> cameras = new ArrayList<>();
-
     private List<DeviceCommandDTO> commands = new ArrayList<>();
+    private String initialState;
 
     public String getName() {
         return name;
@@ -55,13 +55,30 @@ public class ExternalDeviceDTO implements Comparable<ExternalDeviceDTO>{
         this.commands = commands;
     }
 
+    public void setInitialState(String initialState) {
+        this.initialState = initialState;
+    }
+
+    public String getInitialState() {
+        return initialState;
+    }
+
     @Override
     public int compareTo(@NotNull ExternalDeviceDTO o) {
+
         if(!(name.equals(o.getName()) &&
                 portName.equals(o.getPortName()) &&
-                Objects.equals(portBaudRate, o.getPortBaudRate()) &&
-                Objects.equals(cameras, o.getCameras()))){
+                Objects.equals(portBaudRate, o.getPortBaudRate())
+//                Objects.equals(cameras, o.getCameras()))){ // todo: compare cameras (implement compareTo in the camera to not compare obj hash)
+                  )){
             return -1;
+        }
+
+        if(initialState != null){
+            if(o.getInitialState() == null) return -1;
+            if(!initialState.equals(o.getInitialState())){
+                return -1;
+            }
         }
 
         if(commands.size() != o.getCommands().size()){

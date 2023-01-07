@@ -22,6 +22,7 @@ public class yamlFileTest {
         expectedDto.setName("dev1");
         expectedDto.setPortName("port1");
         expectedDto.setPortBaudRate(1000);
+        expectedDto.setInitialState("Start");
 
         CameraDTO camera1 = new CameraDTO();
         camera1.setName("cam1");
@@ -41,6 +42,8 @@ public class yamlFileTest {
         command1.setDescription("Move device by distance of millimeters.");
         command1.setPrefix("moveBy");
         command1.setDevicePrefix("mv");
+        command1.setRequiredStates(List.of("Home", "Position_1"));
+        command1.setResultingState("Moved");
 
         DeviceCommandParamDTO param11 = new DeviceCommandParamDTO();
         param11.setName("XAxisDistance");
@@ -83,12 +86,22 @@ public class yamlFileTest {
         command2.setParams(List.of(param21, param22));
 
         DeviceCommandDTO command3 = new DeviceCommandDTO();
-        command3.setName("Position 1");
-        command3.setDescription("Move to the Position 1 one axis at the time.");
-        command3.setPrefix("Position_1");
-        command3.setEvents(List.of("mvto 100 0 0", "mvto 100 50 0", "mvto 100 50 20"));
+        command3.setName("Home Manipulator");
+        command3.setDescription("Move Manipulator to its Home position in all axes.");
+        command3.setPrefix("home");
+        command3.setDevicePrefix("G28");
+        command3.setRequiredStates(List.of("Start", "Home", "Position_1", "Moved"));
+        command3.setResultingState("Home");
 
-        expectedDto.setCommands(List.of(command1, command2, command3));
+        DeviceCommandDTO command4 = new DeviceCommandDTO();
+        command4.setName("Position 1");
+        command4.setDescription("Move to the Position 1 one axis at the time.");
+        command4.setPrefix("Position_1");
+        command4.setEvents(List.of("mvto 100 0 0", "mvto 100 50 0", "mvto 100 50 20"));
+        command4.setRequiredStates(List.of("Home"));
+        command4.setResultingState("Position_1");
+
+        expectedDto.setCommands(List.of(command1, command2, command3, command4));
 
         // When
         Yaml yaml = new Yaml(new Constructor(ExternalDeviceDTO.class));

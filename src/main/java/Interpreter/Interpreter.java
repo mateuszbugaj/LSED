@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 public class Interpreter {
     private static final Logger logger = LoggerFactory.getLogger(Interpreter.class);
-    public static final String COMMAND_PREFIX = "/";
+    public static final String COMMAND_PREFIX = "!";
     public static final String COMMAND_SPLITTER = ";";
 
     public static DeviceCommand buildCommand(DeviceCommandDTO commandDTO){
@@ -40,13 +40,13 @@ public class Interpreter {
             params.add(deviceCommandParam);
         }
 
-        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents());
+        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents(), commandDTO.getRequiredStates(), commandDTO.getResultingState());
     }
 
     // todo: Maybe UserMessage should not have a type but it should by a inheritance of all these different types and then Interpreter could take only sub-type of UseCommand
-    public static ArrayList<String> interpret(UserMessage userMessage) throws Throwable {
+    public static List<DeviceCommand> interpret(UserMessage userMessage) throws Throwable {
         logger.debug("Interpreting UserMessage: " + userMessage);
-        ArrayList<String> deviceInstructions = new ArrayList<>();
+        List<DeviceCommand> commandsToExecute = new ArrayList<>();
 
 //        if(!isCommand(userMessage)){
 //            logger.debug("Not a command");
@@ -60,11 +60,11 @@ public class Interpreter {
             String newInstruction = "";
             String[] commandComponents = singularCommand.split(" ");
             logger.debug("Singular command split into " + commandComponents.length + (commandComponents.length < 2 ? " component: " : " components: ") + Arrays.toString(commandComponents));
-            if(userMessage.getTargetDevice() != null){
+            Device targetDevice = userMessage.getTargetDevice();
+            if(targetDevice != null){
                 int userCommandParametersNumber = commandComponents.length - 1;
                 String commandPrefix = commandComponents[0];
-                DeviceCommand deviceCommand = userMessage
-                        .getTargetDevice()
+                DeviceCommand deviceCommand = targetDevice
                         .getCommands()
                         .stream()
                         .filter(i -> i.getPrefix().compareTo(commandPrefix) == 0)
@@ -81,13 +81,37 @@ public class Interpreter {
                             }
                         });
 
+                String targetDeviceCurrentState = targetDevice.getCurrentState();
+                if(!targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty()){
+                    deviceCommand
+                            .getRequiredStates()
+                            .stream()
+                            .filter(state -> state.equals(targetDeviceCurrentState))
+                            .findAny()
+                            .orElseThrow(new Supplier<Throwable>() {
+                                @Override
+                                public Throwable get() {
+                                    return new RuntimeException(
+                                            "Device must be in the one of the required states for this command: "
+                                                    + deviceCommand.getRequiredStates()
+                                                    + ". Current state: "
+                                                    + targetDeviceCurrentState
+                                                    + "."
+                                    );
+                                }
+                            });
+                }
+
                 // todo: maybe events also could be made modifiable with parameters
                 if(!deviceCommand.getEvents().isEmpty()){
                     logger.debug("Using events associated with the commands");
                     List<String> events = deviceCommand.getEvents();
+
                     Collections.reverse(events);
-                    deviceInstructions.addAll(events);
-                    return deviceInstructions;
+                    deviceCommand.setDeviceInstructions(events);
+                    commandsToExecute.add(deviceCommand);
+//                    return deviceCommand;
+                    continue;
                 }
 
                 newInstruction = deviceCommand.getDevicePrefix();
@@ -125,14 +149,13 @@ public class Interpreter {
                     }
                 }
 
+                deviceCommand.setDeviceInstructions(List.of(newInstruction));
+                commandsToExecute.add(deviceCommand);
             } else {
                 logger.debug("No device associated with the message");
             }
-
-            deviceInstructions.add(newInstruction);
         }
-
-        return deviceInstructions;
+        return commandsToExecute;
     }
 
     public static boolean isCommand(UserMessage userMessage){

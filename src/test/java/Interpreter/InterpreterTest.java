@@ -44,7 +44,7 @@ public class InterpreterTest {
                 new DeviceCommandParam("XAxisDistance", DeviceCommandParamType.Integer, List.of(), -100, 100, false, null)
         );
 
-        DeviceCommand expectedCommand = new DeviceCommand("Move Relative", "Move device by distance of millimeters.", "moveBy", "mv", expectedParams, List.of());
+        DeviceCommand expectedCommand = new DeviceCommand("Move Relative", "Move device by distance of millimeters.", "moveBy", "mv", expectedParams, List.of(), List.of(), "");
 
         // When
         DeviceCommand buildCommand = Interpreter.buildCommand(commandDTO);

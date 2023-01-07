@@ -47,21 +47,26 @@ public class LSEDApplication extends Application {
         } catch (SerialPortNotFoundException e) {
             logger.error(e.toString());
         }
+//
+//        try {
+//            ExternalDevice device1 = builderDirector.build("src/main/resources/microscope.yaml");
+//            deviceManager.addDevice(device1);
+//        } catch (SerialPortNotFoundException e) {
+//            logger.error(e.toString());
+//        }
 
         try {
-            ExternalDevice device1 = builderDirector.build("src/main/resources/microscope.yaml");
-            deviceManager.addDevice(device1);
+            ExternalDevice device3 = builderDirector.build("src/main/resources/arduinoEcho.yaml");
+            deviceManager.addDevice(device3);
         } catch (SerialPortNotFoundException e) {
             logger.error(e.toString());
         }
 
-        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
+//        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
 //        Chat youtubeChat = new Chat("src/main/resources/youtube.yaml");
         ChatManager chatManager = new ChatManager();
-        chatManager.addChat(twitchChat);
+//        chatManager.addChat(twitchChat);
 //        chatManager.addChat(youtubeChat);
-        deviceManager.addSubscriber(chatManager);
-        chatManager.addSubscriber(deviceManager); // todo: this should subscribe to the UserCommand notifications
 
         chatManager.update(new UserMessage("Admin", "Application start", new Date()).setMessageType(MessageType.ADMIN_MESSAGE));
 
@@ -70,6 +75,9 @@ public class LSEDApplication extends Application {
 
         AuxiliaryWindow auxiliaryWindow = new AuxiliaryWindow(deviceManager, chatManager);
         auxiliaryWindow.addSubscriber(chatManager);
+
+        deviceManager.addSubscriber(chatManager);
+        chatManager.addSubscriber(deviceManager); // todo: this should subscribe to the UserCommand notifications
 
         //todo: here to notify all DeviceChangeSubscribers
         if(deviceManager.getDevices().size() > 0){

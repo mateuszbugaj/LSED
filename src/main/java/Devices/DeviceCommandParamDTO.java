@@ -67,7 +67,7 @@ public class DeviceCommandParamDTO implements Comparable<DeviceCommandParamDTO>{
         if(name.equals(o.getName()) &&
                 type.equals(o.getType()) &&
                 optional.equals(o.getOptional()) &&
-                predefined.equals(o.getPredefined()) &&
+//                (predefined != null && predefined.equals(o.getPredefined())) && // todo: find a way to compare null predefined
                 Objects.equals(range, o.getRange())){
             return 0;
         }

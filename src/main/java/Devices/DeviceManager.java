@@ -1,7 +1,7 @@
 package Devices;
 
 import Interpreter.Interpreter;
-import State.DeviceState;
+import State.DeviceMediator;
 import StreamingService.MessageType;
 import StreamingService.UserMessage;
 import Utils.Publisher;
@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMessage>, Device { // todo: It should not subscribe to the UserMessage but to UserCommand subtype
     private static final Logger logger = LoggerFactory.getLogger(DeviceManager.class);
     private final List<ExternalDevice> devices = new ArrayList<>();
-    private final Map<ExternalDevice, DeviceState> deviceStates = new HashMap<>();
+    private final Map<ExternalDevice, DeviceMediator> deviceStates = new HashMap<>();
     private final Map<ExternalDevice, Command> deviceSendCommand = new HashMap<>();
     private final ArrayList<Subscriber<UserMessage>> userMessageSubscribers = new ArrayList<>();
 
@@ -43,35 +43,77 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 "Camera Name",
                 DeviceCommandParamType.String,
                 List.of(),
-                Integer.MIN_VALUE,
+                0,
                 Integer.MAX_VALUE,
                 false,
                 null);
         DeviceCommand changeCameraCommandByName = new DeviceCommand(
                 "Change camera",
-                "Change main camera to one of available for selected device",
+                "Change main camera to one of available for selected device by providing camera name",
                 "cc",
                 "camera",
                 List.of(changeCameraByNameCommandParam1),
-                List.of());
+                List.of(),
+                List.of(),
+                "");
         systemCommands.add(changeCameraCommandByName);
 
         DeviceCommandParam changeCameraByIdCommandParam1 = new DeviceCommandParam(
-                "Camera Name",
-                DeviceCommandParamType.String,
+                "Camera ID",
+                DeviceCommandParamType.Integer,
                 List.of(),
-                Integer.MIN_VALUE,
+                0,
                 Integer.MAX_VALUE,
                 false,
                 null);
         DeviceCommand changeCameraCommandById = new DeviceCommand(
                 "Change camera",
-                "Change main camera to one of available for selected device",
+                "Change main camera to one of available for selected device  by providing camera ID",
                 "cc",
                 "camera",
                 List.of(changeCameraByIdCommandParam1),
-                List.of());
+                List.of(),
+                List.of(),
+                "");
         systemCommands.add(changeCameraCommandById);
+
+        DeviceCommandParam changeDeviceByIdCommandParam1 = new DeviceCommandParam(
+                "Device id",
+                DeviceCommandParamType.Integer,
+                List.of(),
+                0,
+                Integer.MAX_VALUE,
+                false,
+                null);
+        DeviceCommand changeDeviceCommandById = new DeviceCommand(
+                "Change device",
+                "Change selected device by providing ID",
+                "cd",
+                "device",
+                List.of(changeDeviceByIdCommandParam1),
+                List.of(),
+                List.of(),
+                "");
+        systemCommands.add(changeDeviceCommandById);
+
+        DeviceCommandParam changeDeviceByNameCommandParam1 = new DeviceCommandParam(
+                "Device name",
+                DeviceCommandParamType.String,
+                List.of(),
+                0,
+                Integer.MAX_VALUE,
+                false,
+                null);
+        DeviceCommand changeDeviceCommandByName = new DeviceCommand(
+                "Change device",
+                "Change selected device by providing name",
+                "cd",
+                "device",
+                List.of(changeDeviceByNameCommandParam1),
+                List.of(),
+                List.of(),
+                "");
+        systemCommands.add(changeDeviceCommandByName);
     }
 
     public void addDevice(ExternalDevice device){
@@ -79,9 +121,10 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
         devices.add(device);
 
         // create complementary DeviceState
-        DeviceState deviceState = new DeviceState(); // todo: Maybe DeviceState should hold it's corresponding device like that? 'new DeviceState(Device d);'
-        device.addSubscriber(deviceState);
-        deviceStates.put(device, deviceState);
+        DeviceMediator deviceMediator = new DeviceMediator(); // todo: Maybe DeviceState should hold it's corresponding device like that? 'new DeviceState(Device d);'
+        device.addReceivedMessageSubscriber(deviceMediator);
+        device.addCurrentStateSubscriber(deviceMediator);
+        deviceStates.put(device, deviceMediator);
 
         // create complementary Device Send Command
         Command command = new Command(device);
@@ -96,11 +139,11 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
         return devices.get(id);
     }
 
-    public DeviceState getDeviceState(ExternalDevice device){
+    public DeviceMediator getDeviceState(ExternalDevice device){
         return deviceStates.get(device);
     }
 
-    public DeviceState getDeviceState(Integer id){
+    public DeviceMediator getDeviceState(Integer id){
         if(id < devices.size()){
             return getDeviceState(devices.get(id));
         }
@@ -121,6 +164,16 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
         deviceChangeSubscribers.add(subscriber);
     }
 
+    public void changeSelectedDevice(String name){
+        // todo: device should hold it's ID in field
+        for(int i = 0; i < devices.size(); i++){
+            if(devices.get(i).getName().equals(name)){
+                changeSelectedDevice(i);
+                return;
+            }
+        }
+    }
+
     public void changeSelectedDevice(Integer id){
         logger.debug("Change device to device nr: " + id);
         deviceChangeSubscribers.forEach(i -> i.deviceUpdate(devices.get(id)));
@@ -132,19 +185,17 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
         logger.debug("Received device user message: " + userMessage);
 
         // Check if message is addressed to the device (by name or by index number)
-        if(userMessage.getContent().startsWith("/")){
-            String messageTargetDevice = userMessage.getContent().split(" ")[0].replaceFirst("/", "");
-            if(messageTargetDevice.equals("sys")){
+        // todo: the prefix should be taken from the Interpreter
+        if(userMessage.getContent().startsWith("!")){
+            String messageTargetDevice = userMessage.getContent().split(" ")[0].replaceFirst("!", "");
+            if(messageTargetDevice.equals(systemName)){
                 logger.debug("Message addresses the system");
                 userMessage.setTargetDevice(this);
 
                 try{
-                    ArrayList<String> deviceInstructions = Interpreter.interpret(userMessage);
-                    logger.debug("Received following deviceInstructions form Interpreter: " + deviceInstructions);
-
-                    for(String deviceInstruction : deviceInstructions){
-                        this.addInstruction(deviceInstruction);
-                    }
+                    List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(userMessage);
+                    logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+                    this.addCommandsToExecute(deviceCommandsToExecute);
 
                 } catch (Throwable e){
                     userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
@@ -159,6 +210,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                     externalDevice = devices.stream()
                             .filter(i -> i.getName().equals(messageTargetDevice))
                             .findFirst();
+
                 } catch (IndexOutOfBoundsException e){
                     userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", "Device with ID " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
                     return;
@@ -166,18 +218,14 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
 
                 if(externalDevice.isPresent()){
                     userMessage.setTargetDevice(externalDevice.get());
-
                     try{
-                        ArrayList<String> deviceInstructions = Interpreter.interpret(userMessage);
-                        logger.debug("Received following deviceInstructions form Interpreter: " + deviceInstructions);
-
-                        for(String deviceInstruction : deviceInstructions){
-                            externalDevice.get().addInstruction(deviceInstruction);
-                        }
+                        List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(userMessage);
+                        logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+                        externalDevice.get().addCommandsToExecute(deviceCommandsToExecute);
 
                     } catch (Throwable e){
                         logger.error(e.toString());
-                        userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.toString(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+                        userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
                     }
                 } else {
                     userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", "Device " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
@@ -206,8 +254,15 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
         return "sys";
     }
 
+    public void addCommandsToExecute(List<DeviceCommand> commands){
+        for(DeviceCommand command:commands){
+            addCommandToExecute(command);
+        }
+    }
+
     @Override
-    public void addInstruction(String instruction) {
+    public void addCommandToExecute(DeviceCommand command) {
+        String instruction = command.getDeviceInstructions().pop();
         logger.debug("System received instruction: " + instruction);
         if(instruction.split(" ")[0].equals("camera")){
             try{
@@ -227,10 +282,34 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
             }
         }
+
+        if(instruction.split(" ")[0].equals("device")){
+            try{
+                String deviceName = instruction.split(" ")[1];
+                if(Pattern.compile("-?\\d+(\\.\\d+)?").matcher(deviceName).matches()){
+                    changeSelectedDevice(Integer.parseInt(deviceName) - 1);
+                } else {
+                    changeSelectedDevice(deviceName);
+                }
+
+                /* this just sends device change signal again to refresh GUI */
+                int temp = selectedDeviceIndex.get();
+                selectedDeviceIndex.set(-1);
+                selectedDeviceIndex.set(temp);
+            } catch (Throwable e) {
+                logger.error(e.toString());
+                userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+            }
+        }
     }
 
     @Override
     public List<DeviceCommand> getCommands() {
         return systemCommands;
+    }
+
+    @Override
+    public String getCurrentState() {
+        return ""; // Not a state machine
     }
 }

@@ -1,13 +1,13 @@
 # Device 1
 name: 'Manipulator'
-portName: ttyUSB1
+portName: ttyUSB0
 portBaudRate: 9600
 cameras:
-  - name: "View1"
+  - name: "Effector View"
     portName: "/dev/video0"
-  - name: "View2"
+  - name: "Wide Shot"
     portName: "/dev/video2"
-  - name: "View3"
+  - name: "Microscope View"
     portName: "/dev/video4"
 commands:
   - name: "Move Relative"
@@ -28,65 +28,50 @@ commands:
         range: [-100, 100]
         optional: true
         predefined: 0
-  - name: "Position 1"
-    description: "Move to the Position 1 one axis at the time."
-    prefix: "Position_1"
-    events: [
-      "mv 90 0 0",
-      "mv 0 -50 0",
-      "gr 100",
-      "mv 0 0 -40",
-      "gr 50"]
-  - name: "Position 2"
-    description: "Move to the Position 2 one axis at the time."
-    prefix: "Position_2"
-    events: [
-      "mv 0 0 40",
-      "mv 0 50 0",
-      "mv -90 0 0",
-      "mv 0 0 -40",
-      "gr 100",
-      "mv 0 0 40"]
-  - name: "Position 3"
-    description: "Move to the Position 3 one axis at the time."
-    prefix: "Position_3"
-    events: [
-      "mv 0 0 -40",
-      "gr 50",
-      "mv 0 0 40",
-      "mv 90 0 0",
-      "mv 0 -50 0",
-      "mv 0 0 -40",
-      "gr 100" ]
-  - name: "Position 4"
-    description: "Move to the Position 4 one axis at the time."
-    prefix: "Position_4"
-    events: [
-      "mv 0 0 40",
-      "mv 0 50 0",
-      "mv -90 0 0"]
+  - name: "Move Relative"
+    description: "Move device by distance of millimeters."
+    prefix: "moveBy"
+    devicePrefix: "mv"
+    params:
+      - name: "XAxisDistance"
+        type: Integer
+        range: [ -100, 100 ]
+      - name: "YAxisDistance"
+        type: Integer
+        range: [ -100, 100 ]
+        optional: true
+        predefined: 0
+      - name: "ZAxisDistance"
+        type: Integer
+        range: [ -100, 100 ]
+        optional: true
+        predefined: 0
+  - name: "Home Manipulator"
+    description: "Move Manipulator to its Home position in all axes."
+    prefix: "home"
+    devicePrefix: "G28"
   - name: "Scenario 1"
     description: "Perform scenario number 1."
     prefix: "Scenario_1"
     events: [
-      "mv 90 0 0",
-      "mv 0 -50 0",
-      "gr 100",
-      "mv 0 0 -40",
-      "gr 50",
-      "mv 0 0 40",
-      "mv 0 50 0",
-      "mv -90 0 0",
-      "mv 0 0 -40",
-      "gr 100",
-      "mv 0 0 40",
-      "mv 0 0 -40",
-      "gr 50",
-      "mv 0 0 40",
-      "mv 90 0 0",
-      "mv 0 -50 0",
-      "mv 0 0 -40",
-      "gr 100" ,
-      "mv 0 0 40",
-      "mv 0 50 0",
-      "mv -90 0 0"]
+      "G0 90 0 0",
+      "G0 0 -50 0",
+      "M2 100",
+      "G0 0 0 -40",
+      "M2 50",
+      "G0 0 0 40",
+      "G0 0 50 0",
+      "G0 -90 0 0",
+      "G0 0 0 -40",
+      "M2 100",
+      "G0 0 0 40",
+      "G0 0 0 -40",
+      "M2 50",
+      "G0 0 0 40",
+      "G0 90 0 0",
+      "G0 0 -50 0",
+      "G0 0 0 -40",
+      "M2 100" ,
+      "G0 0 0 40",
+      "G0 0 50 0",
+      "G0 -90 0 0"]

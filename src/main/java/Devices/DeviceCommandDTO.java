@@ -13,6 +13,8 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
     private String devicePrefix = "";
     private List<DeviceCommandParamDTO> params = new ArrayList<>();
     private List<String> events = new ArrayList<>();
+    private List<String> requiredStates = new ArrayList<>();
+    private String resultingState = "";
 
     public String getName() {
         return name;
@@ -62,6 +64,22 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
         this.events = events;
     }
 
+    public List<String> getRequiredStates() {
+        return requiredStates;
+    }
+
+    public void setRequiredStates(List<String> requiredStates) {
+        this.requiredStates = requiredStates;
+    }
+
+    public String getResultingState() {
+        return resultingState;
+    }
+
+    public void setResultingState(String resultingState) {
+        this.resultingState = resultingState;
+    }
+
     @Override
     public int compareTo(@NotNull DeviceCommandDTO o) {
         if(!(name.equals(o.getName()) &&
@@ -79,6 +97,24 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
             boolean isPresent = false;
             for(int j = 0; j < o.getParams().size(); j++){
                 if(params.get(i).compareTo(o.getParams().get(j)) == 0){
+                    isPresent = true;
+                    break;
+                }
+            }
+
+            if(!isPresent){
+                return -1;
+            }
+        }
+
+        // todo: compare events
+
+        if(!resultingState.equals(o.getResultingState())) return -1;
+
+        for(int i = 0; i < requiredStates.size(); i++){
+            boolean isPresent = false;
+            for(int j = 0; j < o.getRequiredStates().size(); j++){
+                if(requiredStates.get(i).equals(o.getRequiredStates().get(j))){
                     isPresent = true;
                     break;
                 }

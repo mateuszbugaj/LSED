@@ -55,10 +55,14 @@ public class ChatManager implements Subscriber<UserMessage>, Publisher<UserMessa
 
         // todo: something like a factory pattern to produce different subtypes of message like UserMessage, UserCommand, AdminMessage based on the content and the author. Keep it simple and short
 
+
         if(Interpreter.isCommand(userMessage)){
             userMessage.setMessageType(MessageType.USER_COMMAND);
-            userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
         }
+
+        chatMessages.add(userMessage);
+        userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
+
 
 //        if(userMessage.getMessageType() == MessageType.NONE){
 //            userMessage.setMessageType(MessageType.USER_MESSAGE);
@@ -75,8 +79,6 @@ public class ChatManager implements Subscriber<UserMessage>, Publisher<UserMessa
 //            userMessage.setMessageType(MessageType.USER_COMMAND);
 //            userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
 //        }
-
-        chatMessages.add(userMessage);
     }
 
     @Override

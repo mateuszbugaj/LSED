@@ -3,7 +3,7 @@ name: Microscope
 portName: ttyUSB0
 portBaudRate: 9600
 cameras:
-  - name: "View1"
+  - name: "Main View"
     portName: "/dev/video4"
 commands:
   - name: "Bed Light Switch"
