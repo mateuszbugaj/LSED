@@ -167,6 +167,10 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
     }
 
     public String getCurrentState() {
+        if(currentState.getState() == null){
+            return  "Not a FSM";
+        }
+
         return currentState.getState();
     }
 

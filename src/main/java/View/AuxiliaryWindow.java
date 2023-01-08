@@ -103,6 +103,8 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
         Text deviceNameText = new Text();
         StackPane selectedDeviceName = new StackPane(deviceNameText);
         selectedDeviceName.setAlignment(Pos.CENTER_LEFT);
+
+        //todo: refactor
         deviceNameText.textProperty().bindBidirectional(deviceManager.selectedDeviceIndex, new StringConverter<>() {
             @Override
             public String toString(Number object) {

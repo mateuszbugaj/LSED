@@ -1,5 +1,5 @@
 # Arduino Echo
-name: 'Echo'
+name: Echo
 portName: ttyUSB1
 portBaudRate: 9600
 initialState: "Start"

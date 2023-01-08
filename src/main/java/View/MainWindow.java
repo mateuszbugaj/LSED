@@ -247,9 +247,11 @@ public class MainWindow {
 
                     // todo: DRY
                     for(UserMessage userMessage: chatManager.getChatMessages()){
-                        Pane cell = generateUserMessageCell(userMessage);
-                        cell.setRotate(180);
-                        commands.getChildren().add(0, cell);
+                        if(!userMessage.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
+                            Pane cell = generateUserMessageCell(userMessage);
+                            cell.setRotate(180);
+                            commands.getChildren().add(0, cell);
+                        }
                     }
                 });
             }
@@ -300,9 +302,12 @@ public class MainWindow {
                 }
                 device.setFill(Color.POWDERBLUE);
 
-                String contentSubstring = userMessage.getContent();
-                System.out.println(contentSubstring);
-                content = new Text(" $ " + userMessage.getContent());
+                String contentSubstring =
+                        userMessage.getContent().contains(" ") ?
+                                userMessage.getContent().substring(userMessage.getContent().indexOf(" ") + 1) :
+                                userMessage.getContent();
+
+                content = new Text(" $ " + contentSubstring);
                 content.setFill(Color.WHITE);
             }
 

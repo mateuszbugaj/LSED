@@ -46,7 +46,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 0,
                 Integer.MAX_VALUE,
                 false,
-                null);
+                "false");
         DeviceCommand changeCameraCommandByName = new DeviceCommand(
                 "Change camera",
                 "Change main camera to one of available for selected device by providing camera name",
@@ -65,7 +65,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 0,
                 Integer.MAX_VALUE,
                 false,
-                null);
+                "false");
         DeviceCommand changeCameraCommandById = new DeviceCommand(
                 "Change camera",
                 "Change main camera to one of available for selected device  by providing camera ID",
@@ -84,7 +84,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 0,
                 Integer.MAX_VALUE,
                 false,
-                null);
+                "false");
         DeviceCommand changeDeviceCommandById = new DeviceCommand(
                 "Change device",
                 "Change selected device by providing ID",
@@ -103,7 +103,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 0,
                 Integer.MAX_VALUE,
                 false,
-                null);
+                "false");
         DeviceCommand changeDeviceCommandByName = new DeviceCommand(
                 "Change device",
                 "Change selected device by providing name",
@@ -176,6 +176,7 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
 
     public void changeSelectedDevice(Integer id){
         logger.debug("Change device to device nr: " + id);
+        selectedDeviceIndex.set(id);
         deviceChangeSubscribers.forEach(i -> i.deviceUpdate(devices.get(id)));
     }
 

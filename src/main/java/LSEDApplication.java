@@ -47,17 +47,10 @@ public class LSEDApplication extends Application {
         } catch (SerialPortNotFoundException e) {
             logger.error(e.toString());
         }
-//
-//        try {
-//            ExternalDevice device1 = builderDirector.build("src/main/resources/microscope.yaml");
-//            deviceManager.addDevice(device1);
-//        } catch (SerialPortNotFoundException e) {
-//            logger.error(e.toString());
-//        }
 
         try {
-            ExternalDevice device3 = builderDirector.build("src/main/resources/arduinoEcho.yaml");
-            deviceManager.addDevice(device3);
+            ExternalDevice device1 = builderDirector.build("src/main/resources/arduinoEcho.yaml");
+            deviceManager.addDevice(device1);
         } catch (SerialPortNotFoundException e) {
             logger.error(e.toString());
         }

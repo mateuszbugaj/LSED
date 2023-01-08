@@ -80,6 +80,7 @@ public class DeviceCommand{
                 ", devicePrefix='" + devicePrefix + '\'' +
                 ", params=" + params +
                 ", events=" + events +
+                ", deviceInstructions=" + deviceInstructions +
                 '}';
     }
 }

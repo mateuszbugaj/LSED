@@ -3,6 +3,7 @@ package Devices;
 import Interpreter.Interpreter;
 import View.Camera;
 import View.CameraDTO;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,10 @@ public class ExternalDeviceBuilder {
     }
 
     public ExternalDeviceBuilder setCameras(List<CameraDTO> cameraDTOS){
-        if(cameraDTOS == null) return this;
+        if(cameraDTOS == null){
+            cameras = new ArrayList<>();
+            return this;
+        }
 
         for(CameraDTO cameraDTO: cameraDTOS){
             usedCameras

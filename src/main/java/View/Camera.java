@@ -34,7 +34,7 @@ public class Camera {
         frameView.setUserData(name);
         frameView.setPreserveRatio(true);
 
-        if(webcam == null) return;
+        if(webcam == null || name.equals("No cameras")) return;
 
         // todo: Is FHD smaller than HD? HD causes problems with USB controller having too little memory but FHD doesn't.
 //        webcam.setCustomViewSizes(WebcamResolution.HD.getSize());

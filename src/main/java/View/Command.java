@@ -12,8 +12,6 @@ public class Command{
     }
 
     public void run(String message) {
-        System.out.println("DeviceSendCommand: " + device.getName() + " <- " + message);
-
         try {
             device.sendMessage(message);
         } catch (IOException e) {
