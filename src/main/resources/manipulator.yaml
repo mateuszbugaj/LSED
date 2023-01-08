@@ -1,6 +1,6 @@
 # Device 1
 name: 'Manipulator'
-portName: ttyUSB0
+portName: ttyUSB1
 portBaudRate: 9600
 initialState: "Start"
 cameras:
@@ -14,6 +14,8 @@ cameras:
 commands:
   - name: "Home"
     description: "Home the manipulator in all axes."
+    requiredStates: ["Start"]
+    resultingState: "home"
     prefix: "home"
     devicePrefix: "G28"
   - name: "Move Relative"
@@ -34,29 +36,71 @@ commands:
         range: [-100, 100]
         optional: true
         predefined: 0
-  - name: "Scenario 1"
-    description: "Perform scenario number 1."
-    prefix: "Scenario_1"
+
+  - name: "Grab the microscope"
+    description: "Grab the microscope"
+    requiredStates: [ "home", "grab_sample_1" ]
+    resultingState: "microscope_grabbed"
+    prefix: "grab_micro"
     events: [
-      "G28",
-      "G0 90 0 0",
-      "G0 0 -50 0",
+              "G90",
+              "G0 240 -100 0",
+              "M2 100",
+              "G0 240 -155 0",
+              "M2 50",
+              "G0 240 -155 10",
+              "G0 240 -50 10",
+              "G0 0 -30 0",
+              "G91"
+    ]
+  - name: "Put away the microscope"
+    description: "Put away the microscope"
+    requiredStates: [ "microscope_grabbed" ]
+    resultingState: "home"
+    prefix: "deposit_micro"
+    events: [
+      "G90",
+      "G0 240 -50 10",
+      "G0 240 -155 10",
+      "G0 240 -155 0",
+      "M2 100",
+      "G0 240 -100 0",
+      "G0 0 0 0",
+      "G91"
+    ]
+  - name: "Grab sample 1"
+    description: "Place sample 1 into the work area"
+    requiredStates: [ "home" ]
+    resultingState: "grab_sample_1"
+    prefix: "grab_sample_1"
+    events: [
+      "G90",
+      "G0 0 -80 0",
+      "M2 100",
+      "G0 0 -80 -40",
+      "M2 50",
+      "G0 0 -80 -30",
+      "G0 0 0 -30",
+      "G0 0 0 -40",
+      "M2 100",
+      "G0 0 0 0",
+      "G91"
+    ]
+  - name: "Put away sample 1"
+    description: "Put away sample 1"
+    requiredStates: [ "grab_sample_1", "grabbed_micro", "home" ]
+    resultingState: "home"
+    prefix: "deposit_sample_1"
+    events: [
+      "G90",
       "M2 100",
       "G0 0 0 -40",
       "M2 50",
-      "G0 0 0 40",
-      "G0 0 50 0",
-      "G0 -90 0 0",
-      "G0 0 0 -40",
+      "G0 0 0 -30",
+      "G0 0 -80 -30",
+      "G0 0 -80 -40",
       "M2 100",
-      "G0 0 0 40",
-      "G0 0 0 -40",
-      "M2 50",
-      "G0 0 0 40",
-      "G0 90 0 0",
-      "G0 0 -50 0",
-      "G0 0 0 -40",
-      "M2 100" ,
-      "G0 0 0 40",
-      "G0 0 50 0",
-      "G0 -90 0 0"]
+      "G0 0 -80 -30",
+      "G0 0 0 0",
+      "G91"
+    ]

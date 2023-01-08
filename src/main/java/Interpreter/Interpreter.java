@@ -116,6 +116,7 @@ public class Interpreter {
                                 DeviceCommandParam param = deviceCommand.getParams().get(i);
                                 if(param.getPossibleValues().isEmpty()){
                                     // Check if the parameter is a number
+                                    // todo: refactor
                                     if(Pattern.compile("-?\\d+(\\.\\d+)?").matcher(commandComponent).matches()){
                                         if(param.getType() == DeviceCommandParamType.Integer){
                                             int value = Integer.parseInt(commandComponent);
@@ -131,6 +132,7 @@ public class Interpreter {
                                         }
                                     }
 
+                                    deviceCommand.setDeviceInstructions(List.of(newInstruction));
                                 } else {
                                     param.getPossibleValues().stream().filter(j -> j.compareTo(commandComponent) == 0).findAny().orElseThrow(new Supplier<Throwable>() {
                                         @Override
@@ -139,6 +141,11 @@ public class Interpreter {
                                             return new RuntimeException("Parameter '" + commandComponent + "' needs to be from the list " + param.getPossibleValues());
                                         }
                                     });
+
+                                    //todo: refactor
+                                    deviceCommand.setDeviceInstructions(List.of(newInstruction + " " + commandComponent));
+                                    commandsToExecute.add(deviceCommand);
+                                    return commandsToExecute;
                                 }
                             } else if(deviceCommand.getParams().get(i).getPredefined() != null){
                                 logger.debug("Using default value for parameter " + i);
