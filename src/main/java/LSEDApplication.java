@@ -55,10 +55,10 @@ public class LSEDApplication extends Application {
             logger.error(e.toString());
         }
 
-//        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
+        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
 //        Chat youtubeChat = new Chat("src/main/resources/youtube.yaml");
         ChatManager chatManager = new ChatManager();
-//        chatManager.addChat(twitchChat);
+        chatManager.addChat(twitchChat);
 //        chatManager.addChat(youtubeChat);
 
         chatManager.update(new UserMessage("Admin", "Application start", new Date()).setMessageType(MessageType.ADMIN_MESSAGE));

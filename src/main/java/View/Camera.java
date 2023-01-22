@@ -62,6 +62,7 @@ public class Camera {
                             bufferedFrame.flush();
                             Platform.runLater(() -> imageProperty.set(frame.get()));
                         }
+                        Thread.sleep(80);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

@@ -14,7 +14,7 @@ cameras:
 commands:
   - name: "Home"
     description: "Home the manipulator in all axes."
-    requiredStates: ["Start"]
+    requiredStates: ["Start", "home"]
     resultingState: "home"
     prefix: "home"
     devicePrefix: "G28"
@@ -46,11 +46,11 @@ commands:
               "G90",
               "G0 240 -100 0",
               "M2 100",
-              "G0 240 -155 0",
-              "M2 50",
-              "G0 240 -155 10",
+              "G0 240 -145 0",
+              "M2 30",
+              "G0 240 -145 10",
               "G0 240 -50 10",
-              "G0 0 -30 0",
+              "G0 0 -50 0",
               "G91"
     ]
   - name: "Put away the microscope"
@@ -61,8 +61,8 @@ commands:
     events: [
       "G90",
       "G0 240 -50 10",
-      "G0 240 -155 10",
-      "G0 240 -155 0",
+      "G0 240 -145 10",
+      "G0 240 -145 0",
       "M2 100",
       "G0 240 -100 0",
       "G0 0 0 0",
@@ -73,15 +73,18 @@ commands:
     requiredStates: [ "home" ]
     resultingState: "grab_sample_1"
     prefix: "grab_sample_1"
+    #83 -200 -15
+    #0 0 -35
     events: [
       "G90",
-      "G0 0 -80 0",
+      "G0 83 -100 0",
+      "G0 83 -200 0",
       "M2 100",
-      "G0 0 -80 -40",
-      "M2 50",
-      "G0 0 -80 -30",
-      "G0 0 0 -30",
-      "G0 0 0 -40",
+      "G0 83 -200 -15",
+      "M2 30",
+      "G0 83 -200 0",
+      "G0 0 0 0",
+      "G0 0 0 -35",
       "M2 100",
       "G0 0 0 0",
       "G91"
@@ -93,14 +96,17 @@ commands:
     prefix: "deposit_sample_1"
     events: [
       "G90",
+      "G0 0 0 0",
       "M2 100",
-      "G0 0 0 -40",
-      "M2 50",
-      "G0 0 0 -30",
-      "G0 0 -80 -30",
-      "G0 0 -80 -40",
+      "G0 0 0 -35",
+      "M2 30",
+      "G0 0 0 0",
+      "G0 83 -100 0",
+      "G0 83 -200 0",
+      "G0 83 -200 -15",
       "M2 100",
-      "G0 0 -80 -30",
+      "G0 83 -200 0",
+      "G0 83 -100 0",
       "G0 0 0 0",
       "G91"
     ]
