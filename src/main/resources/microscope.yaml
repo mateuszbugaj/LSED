@@ -13,10 +13,6 @@ commands:
       - name: "State"
         type: String
         values: [ "on", "off" ]
-      - name: "Intensity"
-        type: Integer
-        range: [0, 64]
-        optional: true
     devicePrefix: "lgt bed"
   - name: "Top Light Switch"
     description: "Switch top light ON and OFF."
@@ -25,8 +21,4 @@ commands:
       - name: "State"
         type: String
         values: [ "on", "off" ]
-      - name: "Intensity"
-        type: Integer
-        range: [ 0, 64 ]
-        optional: true
     devicePrefix: "lgt top"

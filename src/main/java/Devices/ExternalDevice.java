@@ -154,6 +154,7 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
 
     public Camera changeCamera(int cameraId) throws Throwable {
         try{
+            logger.debug("Changing camera to " + cameraId);
             Camera camera = cameras.get(cameraId);
             selectedCamera = camera;
             return camera;

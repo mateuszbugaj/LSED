@@ -5,11 +5,11 @@ portBaudRate: 9600
 initialState: "Start"
 cameras:
   - name: "Effector_View"
-    portName: "/dev/video4"
+    portName: "/dev/video0"
   - name: "Wide_Shot"
     portName: "/dev/video2"
   - name: "Microscope_View"
-    portName: "/dev/video0"
+    portName: "/dev/video4"
 
 commands:
   - name: "Home"
@@ -42,9 +42,12 @@ commands:
     requiredStates: [ "home", "grab_sample_1" ]
     resultingState: "microscope_grabbed"
     prefix: "grab_micro"
+    vars: [
+        posX: 12
+    ]
     events: [
               "G90",
-              "G0 240 -100 0",
+              "G0 posX -100 0",
               "M2 100",
               "G0 240 -145 0",
               "M2 30",

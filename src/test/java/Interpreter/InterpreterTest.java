@@ -1,9 +1,12 @@
 package Interpreter;
 
 import Devices.*;
+import StreamingService.UserMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class InterpreterTest {
@@ -62,6 +65,125 @@ public class InterpreterTest {
         Assertions.assertEquals(expectedCommand.getParams().get(0).getRangeMin(), buildCommand.getParams().get(0).getRangeMin());
         Assertions.assertEquals(expectedCommand.getParams().get(0).getPredefined(), buildCommand.getParams().get(0).getPredefined());
         Assertions.assertEquals(expectedCommand.getParams().get(0).getPossibleValues(), buildCommand.getParams().get(0).getPossibleValues());
+    }
+
+    @Test
+    public void interpretCommandWithOneIntegerParameterTest() throws Throwable {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1 50", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        List<DeviceCommand> deviceCommands = Interpreter.interpret(userMessage);
+
+        Assertions.assertEquals(List.of("cm_1 50"), deviceCommands.get(0).getDeviceInstructions());
+    }
+
+    @Test
+    public void interpretCommandWithOneIntegerParameterAndOneStringParameterTest() throws Throwable {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1, param2), List.of(), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1 50 ABC", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        List<DeviceCommand> deviceCommands = Interpreter.interpret(userMessage);
+
+        Assertions.assertEquals(List.of("cm_1 50 ABC"), deviceCommands.get(0).getDeviceInstructions());
+    }
+
+    @Test
+    public void interpretCommandWithOneIntegerParameterAndOneStringParameterAndTwoCommandsWithTheSameNameAndNumberOfParametersTest() throws Throwable {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
+        DeviceCommand deviceCommand1 = new DeviceCommand("Command 1", "Command 1 (Integer, String)", "CM1", "cm_1", List.of(param1, param2), List.of(), List.of("State1", "State2"), "State3");
+        DeviceCommand deviceCommand2 = new DeviceCommand("Command 1", "Command 1 (Integer, Integer)", "CM1", "cm_1", List.of(param1, param1), List.of(), List.of("State1", "State2"), "State3");
+
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand1, deviceCommand2), "State1");
+        UserMessage userMessage1 = new UserMessage("User1", "!dev1 CM1 50 80", new Date());
+        userMessage1.setTargetDevice(externalDevice);
+
+        UserMessage userMessage2 = new UserMessage("User1", "!dev1 CM1 50 XXX", new Date());
+        userMessage2.setTargetDevice(externalDevice);
+
+        Assertions.assertEquals(List.of("cm_1 50 80"), Interpreter.interpret(userMessage1).get(0).getDeviceInstructions());
+        Assertions.assertEquals(List.of("cm_1 50 XXX"), Interpreter.interpret(userMessage2).get(0).getDeviceInstructions());
+    }
+
+    @Test
+    public void interpretCommandWithOneIntegerParameterAndOneStringParameterAndTwoCommandsWithTheSameNameAndDifferentNumberOfParametersTest() throws Throwable {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
+        DeviceCommand deviceCommand1 = new DeviceCommand("Command 1", "Command 1 (Integer, String)", "CM1", "cm_1", List.of(param1, param2), List.of(), List.of("State1", "State2"), "State3");
+        DeviceCommand deviceCommand2 = new DeviceCommand("Command 1", "Command 1 (Integer, Integer)", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
+
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand1, deviceCommand2), "State1");
+        UserMessage userMessage1 = new UserMessage("User1", "!dev1 CM1 50 80", new Date());
+        userMessage1.setTargetDevice(externalDevice);
+
+        UserMessage userMessage2 = new UserMessage("User1", "!dev1 CM1 50", new Date());
+        userMessage2.setTargetDevice(externalDevice);
+
+        Assertions.assertEquals(List.of("cm_1 50 80"), Interpreter.interpret(userMessage1).get(0).getDeviceInstructions());
+        Assertions.assertEquals(List.of("cm_1 50"), Interpreter.interpret(userMessage2).get(0).getDeviceInstructions());
+    }
+
+    @Test
+    public void interpretCommandWithEventsTest() throws Throwable {
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(), List.of("ABC", "XXX", "YYY"), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        List<DeviceCommand> deviceCommands = Interpreter.interpret(userMessage);
+
+        Assertions.assertEquals(List.of("ABC", "XXX", "YYY"), deviceCommands.get(0).getDeviceInstructions());
+    }
+
+    @Test
+    public void interpretCommandForDeviceWithIncorrectInitialStateTest() {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State5");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1 50", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        Exception exception = Assertions.assertThrows(Exception.class, () -> {
+            Interpreter.interpret(userMessage);
+        });
+
+        Assertions.assertEquals("Device needs to be in the state: [State1, State2]", exception.getMessage());
+    }
+
+    @Test
+    public void interpretCommandWithIncorrectSignatureTest() {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1 ABC", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        Exception exception = Assertions.assertThrows(Exception.class, () -> {
+            List<DeviceCommand> deviceCommands = Interpreter.interpret(userMessage);
+        });
+
+        Assertions.assertEquals("No matching command found for the device.", exception.getMessage());
+    }
+
+    @Test
+    public void interpretCommandWithOptionalParametersTest() throws Throwable {
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
+        DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.Integer, List.of(), 0, 100, true, "0");
+        DeviceCommandParam param3 = new DeviceCommandParam("Param3", DeviceCommandParamType.Integer, List.of(), 0, 100, true, "0");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1, param2, param3), List.of(), List.of("State1", "State2"), "State3");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
+        UserMessage userMessage = new UserMessage("User1", "!dev1 CM1 10", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        List<DeviceCommand> deviceCommands = Interpreter.interpret(userMessage);
+        Assertions.assertEquals(List.of("cm_1 10 0 0"), deviceCommands.get(0).getDeviceInstructions());
     }
 
 //    @Test

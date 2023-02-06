@@ -44,6 +44,152 @@ public class Interpreter {
         return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents(), commandDTO.getRequiredStates(), commandDTO.getResultingState());
     }
 
+    /*
+    public static List<DeviceCommand> interpret(UserMessage userMessage) throws Throwable {
+        logger.debug("Interpreting UserMessage: " + userMessage);
+        List<DeviceCommand> commandsToExecute = new ArrayList<>();
+
+        if(!isCommand(userMessage)){
+            logger.debug("Not a command");
+            return commandsToExecute;
+        }
+
+        String commandContent = userMessage.getContent().substring(1).substring(userMessage.getContent().indexOf(' '));
+        List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).toList();
+        logger.debug("UserMessage split into " + commands.size() + (commands.size() < 2 ? " command: " : " commands: ") + commands);
+        for(String command:commands){
+            String newInstruction = "";
+            String[] commandComponents = command.split(" ");
+            logger.debug("Singular command split into " +
+                    commandComponents.length +
+                    (commandComponents.length < 2 ? " component: " : " components: ") +
+                    Arrays.toString(commandComponents));
+
+            Device targetDevice = userMessage.getTargetDevice();
+            if(targetDevice == null){
+                throw new Throwable("No device");
+            }
+
+            List<DeviceCommand> deviceCommandList = checkForMatchingDeviceCommands(commandComponents, targetDevice);
+            logger.debug("Found " + deviceCommandList.size() + " commands with matching signature");
+            if(deviceCommandList.isEmpty()){
+                throw new Exception("No matching command found for the device.");
+            }
+
+            for(DeviceCommand deviceCommand:deviceCommandList){
+                if(!checkForDeviceCommandCorrectness(commandComponents, deviceCommand, targetDevice)){
+                    continue;
+                }
+
+                logger.debug("Command '" + deviceCommand.getName() + "' is correct");
+
+                List<String> instructions = getInstructions(commandComponents, deviceCommand, targetDevice);
+                logger.debug("Generated instructions: " + instructions);
+                deviceCommand.setDeviceInstructions(instructions);
+                commandsToExecute.add(deviceCommand);
+            }
+
+            if(commandsToExecute.isEmpty()){
+                throw new Exception("Command not correct.");
+            }
+        }
+
+        return commandsToExecute;
+    } */
+
+    private static List<DeviceCommand> checkForMatchingDeviceCommands(String[] commandComponents, Device targetDevice){
+        String commandPrefix = commandComponents[0];
+        int parametersNumber = commandComponents.length - 1;
+
+        List<DeviceCommand> potentialDeviceCommands = targetDevice
+                .getCommands()
+                .stream()
+                .filter(i -> i.getPrefix().compareTo(commandPrefix) == 0)
+                .filter(i -> i.getParams().stream().filter(k -> !k.getOptional()).count() <= parametersNumber).toList();
+
+        List<DeviceCommand> deviceCommands = new ArrayList<>();
+        for(DeviceCommand deviceCommand:potentialDeviceCommands){
+            boolean correctSignature = true;
+            for(int paramId = 0; paramId<deviceCommand.getParams().size(); paramId++){
+                if(paramId > (parametersNumber - 1)){
+                    if(deviceCommand.getParams().get(paramId).getOptional()){
+                    } else {
+                        correctSignature = false;
+                        break;
+                    }
+                } else {
+                    if(deviceCommand.getParams().get(paramId).getType() == DeviceCommandParamType.Integer &&
+                            !Pattern.compile("-?\\d+(\\.\\d+)?").matcher(commandComponents[paramId+1]).matches()){
+                        correctSignature = false;
+                    }
+                }
+
+            }
+
+            if(correctSignature){
+                deviceCommands.add(deviceCommand);
+            }
+        }
+        return deviceCommands;
+    }
+
+    private static boolean checkForDeviceCommandCorrectness(String[] commandComponents, DeviceCommand deviceCommand, Device targetDevice) throws Exception {
+        String targetDeviceCurrentState = targetDevice.getCurrentState();
+        if(targetDeviceCurrentState != null && !targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty() && deviceCommand.getRequiredStates().stream().noneMatch(i -> i.compareTo(targetDeviceCurrentState) == 0)){
+            throw new Exception("Device needs to be in the state: " + deviceCommand.getRequiredStates());
+        }
+
+        List<DeviceCommandParam> params = deviceCommand.getParams();
+        int userCommandParametersNumber = commandComponents.length-1;
+        for(int paramId = 0; paramId<params.size(); paramId++){
+            DeviceCommandParam param = params.get(paramId);
+            if(paramId < userCommandParametersNumber){
+                String commandComponent = commandComponents[paramId + 1];
+                if(param.getPossibleValues().isEmpty()){
+                    // Check if the command component is a number
+                    if(param.getType() == DeviceCommandParamType.Integer){
+                        int value = Integer.parseInt(commandComponent);
+                        if(!(value >= param.getRangeMin() && value <= param.getRangeMax())){
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    if(param.getPossibleValues().stream().noneMatch(j -> j.compareTo(commandComponent) == 0)){
+                        return false;
+                    }
+                }
+            } else {
+                if(!params.get(paramId).getOptional()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand, Device targetDevice){
+        System.out.println(">> " + deviceCommand);
+        if(deviceCommand.getEvents() == null || deviceCommand.getEvents().isEmpty()){
+            String instruction = deviceCommand.getDevicePrefix();
+            for(int paramId = 0; paramId < deviceCommand.getParams().size(); paramId++){
+                if(paramId >= (commandComponents.length - 1)){
+                    instruction = instruction.concat(" ").concat(deviceCommand.getParams().get(paramId).getPredefined());
+                } else {
+                    instruction = instruction.concat(" ").concat(commandComponents[paramId+1]);
+                }
+            }
+            return List.of(instruction);
+        } else {
+            List<String> events = deviceCommand.getEvents();
+            Collections.reverse(events);
+
+            return events;
+        }
+    }
+
     // todo: Maybe UserMessage should not have a type but it should by a inheritance of all these different types and then Interpreter could take only sub-type of UseCommand
     public static List<DeviceCommand> interpret(UserMessage userMessage) throws Throwable {
         logger.debug("Interpreting UserMessage: " + userMessage);
@@ -77,6 +223,7 @@ public class Interpreter {
                 } else {
                     logger.debug("Found " + deviceCommandList.size() + " commands with matching signature");
                     for(DeviceCommand deviceCommand:deviceCommandList){
+                        System.out.println(deviceCommand);
                         String targetDeviceCurrentState = targetDevice.getCurrentState();
                         if(targetDeviceCurrentState != null && !targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty()){
                             deviceCommand

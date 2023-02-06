@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 
 // The view class
@@ -95,15 +96,18 @@ public class MainWindow {
                 ExternalDevice device = deviceManager.getDevice((int) newValue);
                 Camera deviceSelectedCamera = device.getSelectedCamera();
 
-                mainFramePane.getChildren().clear();
-                mainFramePane.getChildren().add(deviceSelectedCamera.getFrameView());
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        mainFramePane.getChildren().clear();
+                        mainFramePane.getChildren().add(deviceSelectedCamera.getFrameView());
+                        deviceSelectedCamera.getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
+                        viewBox.setCenter(mainFramePane);
+                        viewBox.setBottom(generateThumbnails(device.getCameras()));
 
-                deviceSelectedCamera.getFrameView().fitWidthProperty().bind(mainFramePane.widthProperty());
-
-                viewBox.setCenter(mainFramePane);
-                viewBox.setBottom(generateThumbnails(device.getCameras()));
-
-                deviceBorderPane.setCenter(viewBox);
+                        deviceBorderPane.setCenter(viewBox);
+                    }
+                });
             }
         });
 
@@ -243,15 +247,19 @@ public class MainWindow {
             @Override
             public void onChanged(Change<? extends UserMessage> c) {
                 Platform.runLater(() -> {
-                    commands.getChildren().clear();
+                    try{
+                        commands.getChildren().clear();
 
-                    // todo: DRY
-                    for(UserMessage userMessage: chatManager.getChatMessages()){
-                        if(!userMessage.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
-                            Pane cell = generateUserMessageCell(userMessage);
-                            cell.setRotate(180);
-                            commands.getChildren().add(0, cell);
+                        // todo: DRY
+                        for(UserMessage userMessage: chatManager.getChatMessages()){
+                            if(!userMessage.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
+                                Pane cell = generateUserMessageCell(userMessage);
+                                cell.setRotate(180);
+                                commands.getChildren().add(0, cell);
+                            }
                         }
+                    } catch (ConcurrentModificationException e){
+                        System.out.println("Exception 1");
                     }
                 });
             }
@@ -441,8 +449,10 @@ public class MainWindow {
                 devicePort.setText("Serial port: " + device.getPortName());
                 deviceStateLabel.setText("Current state: " + device.getCurrentState());
 
-                deviceInstructionSetVBox.getChildren().clear();
-                deviceInstructionSetVBox.getChildren().add(generateDeviceInstructionSet());
+                Platform.runLater(() -> {
+                    deviceInstructionSetVBox.getChildren().clear();
+                    deviceInstructionSetVBox.getChildren().add(generateDeviceInstructionSet());
+                });
             }
         });
 
@@ -518,8 +528,14 @@ public class MainWindow {
 
         deviceManager.selectedDeviceIndex.addListener((observable, oldValue, newValue) -> {
             if(newValue.intValue() == -1) return;
-            messages.getChildren().clear();
-            messages.getChildren().addAll(generateReceivedCommandsList(deviceManager.getDevice((int) newValue)));
+
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    messages.getChildren().clear();
+                    messages.getChildren().addAll(generateReceivedCommandsList(deviceManager.getDevice((int) newValue)));
+                }
+            });
         });
 
         ScrollPane scrollPane = new ScrollPane(messages);
