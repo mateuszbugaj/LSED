@@ -3,6 +3,7 @@ import StreamingService.Chat;
 import StreamingService.ChatManager;
 import StreamingService.MessageType;
 import StreamingService.UserMessage;
+import Utils.LSEDConfig;
 import View.AuxiliaryWindow;
 import View.MainWindow;
 import com.fazecast.jSerialComm.SerialPort;
@@ -12,8 +13,12 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -21,11 +26,12 @@ public class LSEDApplication extends Application {
     public static Logger logger = LoggerFactory.getLogger(LSEDApplication.class);
 
     public static void main(String[] args) {
-        Application.launch();
+        Application.launch(args);
     }
 
     @Override
     public void start(Stage stage) throws IOException {
+        Parameters parameters = getParameters();
         logger.info("LSED Start");
         stage.setTitle("LSED");
 
@@ -37,29 +43,27 @@ public class LSEDApplication extends Application {
 
         DeviceManager deviceManager = new DeviceManager();
 
+        Yaml yaml = new Yaml(new Constructor(LSEDConfig.class));
+        InputStream inputStream = new FileInputStream(parameters.getRaw().get(0));
+        LSEDConfig lsedConfig = yaml.load(inputStream);
+
         ExternalDeviceBuilder externalDeviceBuilder = new ExternalDeviceBuilder();
         ExternalDeviceBuilderDirector builderDirector = new ExternalDeviceBuilderDirector(externalDeviceBuilder);
 
-        //todo: make better way of deciding on not including specific device than try and catch block
-        try {
-            ExternalDevice device2 = builderDirector.build("src/main/resources/manipulator.yaml");
-            deviceManager.addDevice(device2);
-        } catch (SerialPortNotFoundException e) {
-            logger.error(e.toString());
+        for(String deviceConfig:lsedConfig.getDeviceConfigDir()){
+            try {
+                ExternalDevice device = builderDirector.build(deviceConfig);
+                deviceManager.addDevice(device);
+            } catch (SerialPortNotFoundException e) {
+                logger.error(e.toString());
+            }
         }
 
-        try {
-            ExternalDevice device1 = builderDirector.build("src/main/resources/microscope.yaml");
-            deviceManager.addDevice(device1);
-        } catch (SerialPortNotFoundException e) {
-            logger.error(e.toString());
-        }
-
-        Chat twitchChat = new Chat("src/main/resources/twitch.yaml");
-//        Chat youtubeChat = new Chat("src/main/resources/youtube.yaml");
         ChatManager chatManager = new ChatManager();
-        chatManager.addChat(twitchChat);
-//        chatManager.addChat(youtubeChat);
+        for(String streamConfig:lsedConfig.getStreamConfigDir()){
+            Chat chat = new Chat(streamConfig);
+            chatManager.addChat(chat);
+        }
 
         chatManager.update(new UserMessage("Admin", "Application start", new Date()).setMessageType(MessageType.ADMIN_MESSAGE));
 
@@ -72,7 +76,7 @@ public class LSEDApplication extends Application {
         deviceManager.addSubscriber(chatManager);
         chatManager.addSubscriber(deviceManager); // todo: this should subscribe to the UserCommand notifications
 
-        //todo: here to notify all DeviceChangeSubscribers
+//        todo: here to notify all DeviceChangeSubscribers
         if(deviceManager.getDevices().size() > 0){
             deviceManager.changeSelectedDevice(0);
         }

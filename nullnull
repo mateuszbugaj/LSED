@@ -1,4 +1,0 @@
-cameras: []
-name: dev1
-portBaudRate: 9600
-portName: ttyUSB0
