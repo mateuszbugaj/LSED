@@ -36,7 +36,6 @@ commands: # List of commands for this device
         values: [ "on", "off" ]
     devicePrefix: "lgt top"
 ```
-
 Users can send command to the device typing `!Microscope bedLight on`.
 
 Example of Twitch stream config file:
