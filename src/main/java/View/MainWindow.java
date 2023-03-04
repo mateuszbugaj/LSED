@@ -1,14 +1,11 @@
 package View;
 
 import Devices.*;
-import StreamingService.Chat;
-import StreamingService.ChatManager;
-import StreamingService.UserMessage;
+import StreamingService.*;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -30,16 +27,18 @@ import java.util.List;
 
 // The view class
 // Each component of the GUI should be its own object
-public class MainWindow {
+public class MainWindow implements MessageSubscriber {
     private static final Logger logger = LoggerFactory.getLogger(MainWindow.class);
     private final Stage stage;
     private final DeviceManager deviceManager;
     private final ChatManager chatManager;
+    private final UserManager userManager;
 
-    public MainWindow(Stage s, DeviceManager deviceManager, ChatManager chatManager){
+    public MainWindow(Stage s, DeviceManager deviceManager, ChatManager chatManager, UserManager userManager){
         stage = s;
         this.deviceManager = deviceManager;
         this.chatManager = chatManager;
+        this.userManager = userManager;
 
         stage.setWidth(1200);
         stage.setHeight(800);
@@ -201,59 +200,100 @@ public class MainWindow {
                 new BorderWidths(0, 0, 3, 0)
         )));
 
-        Text userInControl = new Text("User1");
+        Text userInControl = new Text("No one in control");
+        Text userInControlTimer = new Text();
+        userManager.getActiveUser().addListener(new ChangeListener<User>() {
+            @Override
+            public void changed(ObservableValue<? extends User> observableValue, User user, User newUser) {
+                if(newUser != null){
+                    userInControl.setText(newUser.getName());
+                } else {
+                    userInControl.setText("No one in control");
+                    userInControlTimer.setText("");
+                }
+            }
+        });
         userInControl.setWrappingWidth(userBoxWidth);
         userInControl.setFont(new Font(30));
         userInControl.setFill(Paint.valueOf("green"));
         userQueueVBox.getChildren().add(userInControl);
 
-        Text userInControlTimer = new Text("|##################----| 26:48");
+        userManager.getActiveUserTimerSeconds().addListener(new ChangeListener<Float>() {
+            @Override
+            public void changed(ObservableValue<? extends Float> observable, Float oldValue, Float newValue) {
+                int minutes = (int) (newValue/60);
+                int seconds = (int) (newValue%60);
+                userInControlTimer.setText(minutes + ":" + seconds);
+            }
+        });
         userInControlTimer.setFont(new Font(15));
         userInControlTimer.setFill(Paint.valueOf("green"));
         userQueueVBox.getChildren().add(userInControlTimer);
 
+        VBox userQueueContent = new VBox();
+        userQueueContent.getChildren().add(new Text(""));
+
         //todo: implement
-        for(String user: List.of("User2 - 10:00", "User3 - 15:00", "User4 - 30:00", "User5 - 10:00", "And 8 others...")){
-            Text userControlQueue = new Text(user);
-            userControlQueue.setWrappingWidth(userBoxWidth);
-            userControlQueue.setFont(new Font(15));
-            userControlQueue.setFill(Paint.valueOf("white"));
-            userQueueVBox.getChildren().add(userControlQueue);
-        }
+        userManager.getUserQueue().addListener(new ListChangeListener<UserRequest>() {
+            @Override
+            public void onChanged(Change<? extends UserRequest> c) {
+                Platform.runLater(() -> {
+                    userQueueContent.getChildren().clear();
+                    int counter = 0;
+                    for(UserRequest userRequest: userManager.getUserQueue()){
+                        Text userControlQueue = new Text(userRequest.getUser().getName() + " : " + userRequest.getTimeSeconds()/60);
+                        userControlQueue.setWrappingWidth(userBoxWidth);
+                        userControlQueue.setFont(new Font(15));
+                        userControlQueue.setFill(Paint.valueOf("white"));
+                        userQueueContent.getChildren().add(userControlQueue);
 
-        userBox.getChildren().add(userQueueVBox);
+                        if(counter++ > 5){
+                            Text queueInfo = new Text("And " + (userManager.getUserQueue().size() - 5) + " more...");
+                            queueInfo.setWrappingWidth(userBoxWidth);
+                            queueInfo.setFont(new Font(15));
+                            queueInfo.setFill(Paint.valueOf("white"));
+                            userQueueContent.getChildren().add(queueInfo);
+                            break;
+                        }
+                    }
+                });
+            }
+        });
 
-        Text userControlTip = new Text("Type: \n'!sys get_control <time in minutes (max 30)>'");
+        userQueueVBox.getChildren().add(userQueueContent);
+
+        Text userControlTip = new Text("Type: \n'!request <time in minutes (max 30)>'");
         userControlTip.setWrappingWidth(userBoxWidth);
         userControlTip.setFont(new Font(12));
         userControlTip.setFill(Paint.valueOf("grey"));
-        userQueueVBox.getChildren().add(userControlTip);
+        userBox.getChildren().add(userControlTip);
+
+        userBox.getChildren().addAll(userQueueVBox);
 
         // All user messages (or only valid commands?)
         VBox commands = new VBox();
         commands.setSpacing(10);
         commands.setPrefHeight(2000);
         commands.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
-        SimpleDateFormat receivedMessageTimestampDateFormat = new SimpleDateFormat("HH:mm:ss:SSS"); //todo: this could be read from the config file for device
 
         // todo: this may be not needed as there is no messages from users at the start of the program
-        for(UserMessage userMessage: chatManager.getChatMessages()){
-            Pane cell = generateUserMessageCell(userMessage);
+        for(Message message : chatManager.getChatMessages()){
+            Pane cell = generateUserMessageCell(message);
             cell.setRotate(180);
             commands.getChildren().add(0, cell);
         }
 
-        chatManager.getChatMessages().addListener(new ListChangeListener<UserMessage>() {
+        chatManager.getChatMessages().addListener(new ListChangeListener<Message>() {
             @Override
-            public void onChanged(Change<? extends UserMessage> c) {
+            public void onChanged(Change<? extends Message> c) {
                 Platform.runLater(() -> {
                     try{
                         commands.getChildren().clear();
 
                         // todo: DRY
-                        for(UserMessage userMessage: chatManager.getChatMessages()){
-                            if(!userMessage.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
-                                Pane cell = generateUserMessageCell(userMessage);
+                        for(Message message : chatManager.getChatMessages()){
+                            if(!message.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
+                                Pane cell = generateUserMessageCell(message);
                                 cell.setRotate(180);
                                 commands.getChildren().add(0, cell);
                             }
@@ -278,82 +318,98 @@ public class MainWindow {
         return userBox;
     }
 
-    private TextFlow generateUserMessageCell(UserMessage userMessage){
+    private TextFlow generateUserMessageCell(Message message){
         Text date = new Text();
         Text user = new Text();
         Text device = new Text();
         Text content = new Text();
 
-        switch (userMessage.getMessageType()){
-            case USER_MESSAGE -> {
-                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
-                date.setFill(Color.LIGHTSLATEGREY);
+        date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
+        date.setFill(Color.LIGHTSLATEGREY);
 
-                user = new Text(userMessage.getUser() + ": ");
-                user.setFill(Color.MEDIUMSEAGREEN);
+        user = new Text(message.getUser().getName() + ": ");
+        user.setFill(Color.GREY);
 
-                content = new Text(" $ " + userMessage.getContent());
-                content.setFill(Color.GREY);
-            }
+        if(message.getTargetDevice() == null){
+            device = new Text("/");
+        } else {
+            device = new Text("/" + message.getTargetDevice().getName());
+        }
+        device.setFill(Color.GREY);
 
-            case USER_COMMAND -> {
-                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
-                date.setFill(Color.LIGHTSLATEGREY);
+        content = new Text(message.getContent());
+        content.setFill(Color.GREY);
 
-                user = new Text(userMessage.getUser() + ": ");
-                user.setFill(Color.MEDIUMSEAGREEN);
-
-                if(userMessage.getTargetDevice() == null){
-                    device = new Text("/");
-                } else {
-                    device = new Text("/" + userMessage.getTargetDevice().getName());
-                }
-                device.setFill(Color.POWDERBLUE);
-
-                String contentSubstring =
-                        userMessage.getContent().contains(" ") ?
-                                userMessage.getContent().substring(userMessage.getContent().indexOf(" ") + 1) :
-                                userMessage.getContent();
-
-                content = new Text(" $ " + contentSubstring);
-                content.setFill(Color.WHITE);
-            }
-
-            case ADMIN_MESSAGE -> {
-                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
-                date.setFill(Color.LIGHTSLATEGREY);
-
-                user = new Text(userMessage.getUser());
-                user.setFill(Color.TOMATO);
-
-                //todo: Should admin message contain info about the device
-//                if(userMessage.getTargetDevice() == null){
+//        switch (message.getMessageType()){
+//            case MESSAGE -> {
+//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
+//                date.setFill(Color.LIGHTSLATEGREY);
+//
+//                user = new Text(message.getUser().getName() + ": ");
+//                user.setFill(Color.MEDIUMSEAGREEN);
+//
+//                content = new Text(" $ " + message.getContent());
+//                content.setFill(Color.GREY);
+//            }
+//
+//            case DEVICE_COMMAND -> {
+//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
+//                date.setFill(Color.LIGHTSLATEGREY);
+//
+//                user = new Text(message.getUser().getName() + ": ");
+//                user.setFill(Color.MEDIUMSEAGREEN);
+//
+//                if(message.getTargetDevice() == null){
 //                    device = new Text("/");
 //                } else {
-//                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
+//                    device = new Text("/" + message.getTargetDevice().getName());
 //                }
 //                device.setFill(Color.POWDERBLUE);
-
-                content = new Text("$ " + userMessage.getContent());
-                content.setFill(Color.WHITE);
-            }
-
-            case INTERPRETER_MESSAGE -> {
-                content = new Text(userMessage.getContent());
-                content.setFill(Color.TOMATO);
-            }
-
-            case NONE -> {
-                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(userMessage.getTimestamp()) + "] ");
-                date.setFill(Color.LIGHTSLATEGREY);
-
-                user = new Text(userMessage.getUser() + ": ");
-                user.setFill(Color.GREY);
-
-                content = new Text(userMessage.getContent());
-                content.setFill(Color.GREY);
-            }
-        }
+//
+//                String contentSubstring =
+//                        message.getContent().contains(" ") ?
+//                                message.getContent().substring(message.getContent().indexOf(" ") + 1) :
+//                                message.getContent();
+//
+//                content = new Text(" $ " + contentSubstring);
+//                content.setFill(Color.WHITE);
+//            }
+//
+//            case ADMIN_MESSAGE -> {
+//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
+//                date.setFill(Color.LIGHTSLATEGREY);
+//
+//                user = new Text(message.getUser().getName());
+//                user.setFill(Color.TOMATO);
+//
+//                //todo: Should admin message contain info about the device
+////                if(userMessage.getTargetDevice() == null){
+////                    device = new Text("/");
+////                } else {
+////                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
+////                }
+////                device.setFill(Color.POWDERBLUE);
+//
+//                content = new Text("$ " + message.getContent());
+//                content.setFill(Color.WHITE);
+//            }
+//
+//            case ERROR -> {
+//                content = new Text(message.getContent());
+//                content.setFill(Color.TOMATO);
+//            }
+//
+//            case NONE -> {
+//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
+//                date.setFill(Color.LIGHTSLATEGREY);
+//
+//                user = new Text(message.getUser().getName() + ": ");
+//                user.setFill(Color.GREY);
+//
+//                content = new Text(message.getContent());
+//                content.setFill(Color.GREY);
+//            }
+//        }
 
         TextFlow textFlow = new TextFlow();
         if(!date.getText().isEmpty()) textFlow.getChildren().add(date);
@@ -639,11 +695,11 @@ public class MainWindow {
         }
 
         HBox chatsHBox = new HBox();
-        for(Chat chat:chatManager.getChats()){
+        for(ChatService chat:chatManager.getChats()){
             HBox chatTab = new HBox();
             chatTab.setPadding(new Insets(5));
 //            chatTab.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0, 0, 0, 2))));
-            Text chatName = new Text(chat.getChatName());
+            Text chatName = new Text(chat.getName());
             chatName.setFill(Paint.valueOf("white"));
             StackPane chatNameStackPane = new StackPane(chatName);
             StackPane.setAlignment(chatNameStackPane, Pos.CENTER);
@@ -654,5 +710,15 @@ public class MainWindow {
         statusBar.setRight(chatsHBox);
 
         return statusBar;
+    }
+
+    @Override
+    public void annotateMessage(Message message) {
+
+    }
+
+    @Override
+    public void handleMessage(Message message) {
+        // todo: refresh messages (potential replacement for list listener)
     }
 }

@@ -1,5 +1,7 @@
 package Devices;
 
+import StreamingService.User;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +18,7 @@ public class DeviceCommand{
     private final List<String> requiredStates;
     private final String resultingState;
     private Stack<String> deviceInstructions;
+    private User owner;
 
     public DeviceCommand(String name, String description, String prefix, String devicePrefix, List<DeviceCommandParam> params, List<String> events, List<String> requiredStates, String resultingState) {
         this.name = name;
@@ -68,6 +71,14 @@ public class DeviceCommand{
         Stack<String> instructionStack = new Stack<>();
         instructionStack.addAll(deviceInstructions);
         this.deviceInstructions = instructionStack;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 
     @Override

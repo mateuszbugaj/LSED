@@ -1,9 +1,12 @@
 package StreamingService;
 
 public enum MessageType {
-    USER_MESSAGE,
-    ADMIN_MESSAGE,
-    INTERPRETER_MESSAGE,
-    USER_COMMAND,
+    MESSAGE,
+    COMMAND,
+    DEVICE_COMMAND,
+    SYSTEM_COMMAND,
+    REQUEST_COMMAND,
+    ERROR,
+    INFO,
     NONE
 }

@@ -4,10 +4,7 @@ import Devices.ExternalDevice;
 import Devices.DeviceManager;
 import Devices.ReceivedMessage;
 import State.DeviceMediator;
-import StreamingService.Chat;
-import StreamingService.ChatManager;
-import StreamingService.MessageType;
-import StreamingService.UserMessage;
+import StreamingService.*;
 import Utils.Publisher;
 import Utils.Subscriber;
 import javafx.beans.property.BooleanProperty;
@@ -32,14 +29,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Date;
 
-public class AuxiliaryWindow implements Publisher<UserMessage> {
+public class AuxiliaryWindow implements Publisher<Message> {
     private static final Logger logger = LoggerFactory.getLogger(AuxiliaryWindow.class);
     private final Stage stage;
     private final DeviceManager deviceManager;
     private final ChatManager chatManager;
-    private final ArrayList<Subscriber<UserMessage>> receivedMessageSubscriber = new ArrayList<>();
+    private final ArrayList<Subscriber<Message>> receivedMessageSubscriber = new ArrayList<>();
 
     public AuxiliaryWindow(DeviceManager deviceManager, ChatManager chatManager) {
         this.deviceManager = deviceManager;
@@ -231,8 +227,8 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
 
         HBox chatHBox = new HBox();
         chatHBox.setSpacing(10);
-        for(Chat chat: chatManager.getChats()){
-            HBox chatCell = new HBox(new Text(chat.getChatName()), new ImageView(chat.getIcon()));
+        for(ChatService chat: chatManager.getChats()){
+            HBox chatCell = new HBox(new Text(chat.getName()), new ImageView(chat.getIcon()));
             chatCell.setPadding(new Insets(3, 10, 3, 10));
             chatCell.setBorder(new Border(new BorderStroke(Paint.valueOf("black"), BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(2))));
             chatHBox.getChildren().add(chatCell);
@@ -247,7 +243,8 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
 //                    chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
 //                    chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
 //                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date())));
-                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
+//                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage(UserManager.getUser("Admin"), chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
+                    chatManager.handleNewMessage(chatInputTextField.getText(), "Admin");
                     chatInputTextField.setText("");
                 }
             }
@@ -260,7 +257,8 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
             if(!chatInputTextField.getText().isEmpty()){
 //                chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
 //                chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-                receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
+//                receivedMessageSubscriber.forEach(s -> s.update(new UserMessage(UserManager.getUser("Admin"), chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
+                chatManager.handleNewMessage(chatInputTextField.getText(), "Admin");
                 chatInputTextField.setText("");
             }
         });
@@ -281,12 +279,12 @@ public class AuxiliaryWindow implements Publisher<UserMessage> {
     }
 
     @Override
-    public void addSubscriber(Subscriber<UserMessage> subscriber) {
+    public void addSubscriber(Subscriber<Message> subscriber) {
         receivedMessageSubscriber.add(subscriber);
     }
 
     @Override
-    public void removeSubscriber(Subscriber<UserMessage> subscriber) {
+    public void removeSubscriber(Subscriber<Message> subscriber) {
         receivedMessageSubscriber.remove(subscriber);
     }
 }

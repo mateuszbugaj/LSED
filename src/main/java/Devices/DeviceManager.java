@@ -2,10 +2,7 @@ package Devices;
 
 import Interpreter.Interpreter;
 import State.DeviceMediator;
-import StreamingService.MessageType;
-import StreamingService.UserMessage;
-import Utils.Publisher;
-import Utils.Subscriber;
+import StreamingService.*;
 import View.Command;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -15,12 +12,11 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMessage>, Device { // todo: It should not subscribe to the UserMessage but to UserCommand subtype
+public class DeviceManager implements Device, MessageSubscriber {
     private static final Logger logger = LoggerFactory.getLogger(DeviceManager.class);
     private final List<ExternalDevice> devices = new ArrayList<>();
     private final Map<ExternalDevice, DeviceMediator> deviceStates = new HashMap<>();
     private final Map<ExternalDevice, Command> deviceSendCommand = new HashMap<>();
-    private final ArrayList<Subscriber<UserMessage>> userMessageSubscribers = new ArrayList<>();
 
     private final String systemName = "sys";
     private final List<DeviceCommand> systemCommands = new ArrayList<>();
@@ -32,8 +28,10 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
      */
     public IntegerProperty selectedDeviceIndex = new SimpleIntegerProperty(0);
     private ArrayList<DeviceChangeSubscriber> deviceChangeSubscribers = new ArrayList<>();
+    private final ChatManagerMediator mediator;
 
-    public DeviceManager() {
+    public DeviceManager(ChatManagerMediator mediator) {
+        this.mediator = mediator;
         selectedDeviceIndex.addListener((observable, oldValue, newValue) -> {
             if(newValue.intValue() == -1) return;
             changeSelectedDevice((Integer) newValue);
@@ -182,72 +180,109 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
 
     // todo: refactor this method
     @Override
-    public void update(UserMessage userMessage) {
-        logger.debug("Received device user message: " + userMessage);
+    public void handleMessage(Message message) {
+        logger.debug("Received device user message: " + message);
 
-        // Check if message is addressed to the device (by name or by index number)
-        // todo: the prefix should be taken from the Interpreter
-        if(userMessage.getContent().startsWith("!")){
-            String messageTargetDevice = userMessage.getContent().split(" ")[0].replaceFirst("!", "");
-            if(messageTargetDevice.equals(systemName)){
-                logger.debug("Message addresses the system");
-                userMessage.setTargetDevice(this);
-
-                try{
-                    List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(userMessage);
-                    logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
-                    this.addCommandsToExecute(deviceCommandsToExecute);
-
-                } catch (Throwable e){
-                    userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
-                }
-            } else {
-                Optional<ExternalDevice> externalDevice;
-
-                try{
-                    int deviceIndex = Integer.parseInt(messageTargetDevice);
-                    externalDevice = Optional.ofNullable(devices.get(deviceIndex - 1));
-                } catch (NumberFormatException e){
-                    externalDevice = devices.stream()
-                            .filter(i -> i.getName().equals(messageTargetDevice))
-                            .findFirst();
-
-                } catch (IndexOutOfBoundsException e){
-                    userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", "Device with ID " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
-                    return;
+        if(message.getMessageType().equals(MessageType.SYSTEM_COMMAND) || message.getMessageType().equals(MessageType.DEVICE_COMMAND)){
+            try{
+                List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(message);
+                logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+                for(DeviceCommand command:deviceCommandsToExecute){
+                    message.getTargetDevice().addCommandToExecute(command);
                 }
 
-                if(externalDevice.isPresent()){
-                    userMessage.setTargetDevice(externalDevice.get());
-                    try{
-                        List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(userMessage);
-                        logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
-                        externalDevice.get().addCommandsToExecute(deviceCommandsToExecute);
-
-                    } catch (Throwable e){
-                        logger.error(e.toString());
-                        userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
-                    }
-                } else {
-                    userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", "Device " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
-                }
+            } catch (Throwable e){
+                logger.error(e.toString());
+                mediator.handleNewMessage(e.getMessage(), "Interpreter");
+//                        userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
             }
         }
+
+//        // Check if message is addressed to the device (by name or by index number)
+//        // todo: the prefix should be taken from the Interpreter
+//        if(message.getContent().startsWith("!")){
+//            String messageTargetDevice = message.getContent().split(" ")[0].replaceFirst("!", "");
+//            if(messageTargetDevice.equals(systemName)){
+//                logger.debug("Message addresses the system");
+//                message.setTargetDevice(this);
+//
+//                try{
+//                    List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(message);
+//                    logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+//                    this.addCommandsToExecute(deviceCommandsToExecute);
+//
+//                } catch (Throwable e){
+//                    mediator.handleNewMessage(e.getMessage(), "Interpreter");
+////                    userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+//                }
+//            } else {
+//                Optional<ExternalDevice> externalDevice;
+//
+//                try{
+//                    int deviceIndex = Integer.parseInt(messageTargetDevice);
+//                    externalDevice = Optional.ofNullable(devices.get(deviceIndex - 1));
+//                } catch (NumberFormatException e){
+//                    externalDevice = devices.stream()
+//                            .filter(i -> i.getName().equals(messageTargetDevice))
+//                            .findFirst();
+//
+//                } catch (IndexOutOfBoundsException e){
+//                    mediator.handleNewMessage("Device with ID " + messageTargetDevice + " not found", "Interpreter");
+////                    userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), "Device with ID " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+//                    return;
+//                }
+//
+//                if(externalDevice.isPresent()){
+//                    message.setTargetDevice(externalDevice.get());
+//                    try{
+//                        List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(message);
+//                        logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+//                        externalDevice.get().addCommandsToExecute(deviceCommandsToExecute);
+//
+//                    } catch (Throwable e){
+//                        logger.error(e.toString());
+//                        mediator.handleNewMessage(e.getMessage(), "Interpreter");
+////                        userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+//                    }
+//                } else {
+//                    mediator.handleNewMessage("Device " + messageTargetDevice + " not found", "Interpreter");
+////                    userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), "Device " + messageTargetDevice + " not found", new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+//                }
+//            }
+//        }
     }
 
     @Override
-    public void addSubscriber(Subscriber<UserMessage> subscriber) {
-        userMessageSubscribers.add(subscriber);
-    }
+    public void annotateMessage(Message message) {
+        // Check if message is a device command or a system command
+        if(message.getMessageType().equals(MessageType.COMMAND)){
+            String messageTargetDevice = message.getContent().split(" ")[0].replaceFirst("!", "");
 
-    @Override
-    public void removeSubscriber(Subscriber<UserMessage> subscriber) {
-        userMessageSubscribers.remove(subscriber);
-    }
+            if(messageTargetDevice.equals(systemName)){
+                message.setTargetDevice(this);
+                message.setType(MessageType.SYSTEM_COMMAND);
+                return;
+            }
 
-    @Override
-    public void receiveMessage(ReceivedMessage receivedMessage) {
+            Optional<ExternalDevice> externalDevice;
 
+            try{
+                int deviceIndex = Integer.parseInt(messageTargetDevice);
+                externalDevice = Optional.ofNullable(devices.get(deviceIndex - 1));
+            } catch (NumberFormatException e){
+                externalDevice = devices.stream()
+                        .filter(i -> i.getName().equals(messageTargetDevice))
+                        .findFirst();
+
+            } catch (IndexOutOfBoundsException e){
+                return;
+            }
+
+            if(externalDevice.isPresent()){
+                message.setTargetDevice(externalDevice.get());
+                message.setType(MessageType.DEVICE_COMMAND);
+            }
+        }
     }
 
     @Override
@@ -280,7 +315,8 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 selectedDeviceIndex.set(temp);
             } catch (Throwable e) {
                 logger.error(e.toString());
-                userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+                mediator.handleNewMessage(e.getMessage(), "Interpreter");
+//                userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
             }
         }
 
@@ -299,7 +335,8 @@ public class DeviceManager implements Subscriber<UserMessage>, Publisher<UserMes
                 selectedDeviceIndex.set(temp);
             } catch (Throwable e) {
                 logger.error(e.toString());
-                userMessageSubscribers.forEach(i -> i.update(new UserMessage("Interpreter", e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
+                mediator.handleNewMessage(e.getMessage(), "Interpreter");
+//                userMessageSubscribers.forEach(i -> i.update(new UserMessage(UserManager.getUser("Interpreter"), e.getMessage(), new Date()).setMessageType(MessageType.INTERPRETER_MESSAGE)));
             }
         }
     }

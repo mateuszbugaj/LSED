@@ -1,93 +1,72 @@
 package StreamingService;
 
-import Devices.ExternalDevice;
-import Devices.DeviceChangeSubscriber;
 import Interpreter.Interpreter;
-import Utils.Publisher;
-import Utils.Subscriber;
-import State.ChatState;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 // ChatManager is equivalent to the DeviceManager
-public class ChatManager implements Subscriber<UserMessage>, Publisher<UserMessage> {
+public class ChatManager implements ChatManagerMediator{
     private static final Logger logger = LoggerFactory.getLogger(ChatManager.class);
-    private final ArrayList<Chat> chats = new ArrayList<>();
-    private final ObservableList<UserMessage> chatMessages = FXCollections.observableArrayList();
-    private ArrayList<Subscriber<UserMessage>> userMessageSubscribers = new ArrayList<>();
+    private final ArrayList<ChatService> chats = new ArrayList<>();
+    private final ObservableList<Message> chatMessages = FXCollections.observableArrayList();
+    private final UserManager userManager;
+    private final List<MessageSubscriber> messageSubscribers;
 
-    public void addChat(Chat chat){
-        logger.info("Adding chat " + chat.getChatName());
-        chats.add(chat);
-        chat.addSubscriber(this);
-//
-//        // create complementary Device Send Command
-//        Command command = new Command(device);
-//        deviceSendCommand.put(device, command);
+    public ChatManager(UserManager userManager) {
+        this.userManager = userManager;
+        messageSubscribers = new ArrayList<>();
     }
 
-    public List<Chat> getChats(){
+    public void addChat(ChatService chat){
+        logger.info("Adding chat " + chat.getName());
+        chats.add(chat);
+    }
+
+    public List<ChatService> getChats(){
         return new ArrayList<>(chats);
     }
 
-    public Chat getChat(int id){
-        return chats.get(id);
-    }
-
-    public ObservableList<UserMessage> getChatMessages() {
+    public ObservableList<Message> getChatMessages() {
         return chatMessages;
     }
 
-    public void sendMessage(UserMessage message){
-        logger.debug("Sending message to all added chats: " + message.getContent());
-        chats.forEach(chat -> chat.sendMessage(message.getContent()));
-        chatMessages.add(message);
-    }
-
     @Override
-    public void update(UserMessage userMessage) {
-        logger.debug("Chat manager registered " + userMessage.getMessageType() + " : " + userMessage.getContent());
+    public void handleNewMessage(String messageContent, String userName) {
+        logger.debug("Chat manager registered message : " + messageContent + " - " + userName);
 
-        // todo: something like a factory pattern to produce different subtypes of message like UserMessage, UserCommand, AdminMessage based on the content and the author. Keep it simple and short
+        User user = userManager.getUser(userName);
+        Message message = new Message(user, messageContent, new Date());
 
-
-        if(Interpreter.isCommand(userMessage)){
-            userMessage.setMessageType(MessageType.USER_COMMAND);
+        MessageOwnership messageOwnership;
+        switch (userName.toLowerCase(Locale.ROOT)){
+            case "admin":
+                messageOwnership = MessageOwnership.ADMIN;
+                break;
+            case "interpreter":
+                messageOwnership = MessageOwnership.INTERPRETER;
+                break;
+            default:
+                messageOwnership = MessageOwnership.USER;
         }
 
-        chatMessages.add(userMessage);
-        userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
+        message.setOwnership(messageOwnership);
 
+        if(Interpreter.isCommand(message)){
+            message.setType(MessageType.COMMAND);
+        } else {
+            message.setType(MessageType.MESSAGE);
+        }
 
-//        if(userMessage.getMessageType() == MessageType.NONE){
-//            userMessage.setMessageType(MessageType.USER_MESSAGE);
-//        }
-//
-////        if(userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE){
-////            if(currentSelectedDevice != null){
-////                // todo: the message could look like this: "/dev1 command parameter" "/microscope command parameter; command parameter" "/sys command parameter"
-////                userMessage.setTargetDevice(currentSelectedDevice);
-////            }
-////        }
-//
-//        if((userMessage.getMessageType() == MessageType.USER_MESSAGE || userMessage.getMessageType() == MessageType.ADMIN_MESSAGE) && Interpreter.isCommand(userMessage)){
-//            userMessage.setMessageType(MessageType.USER_COMMAND);
-//            userMessageSubscribers.forEach(i -> i.update(userMessage)); // todo: should be userCommandSubscribers
-//        }
+        chatMessages.add(message);
+        messageSubscribers.forEach(sub -> sub.annotateMessage(message));
+        messageSubscribers.forEach(sub -> sub.handleMessage(message));
     }
 
-    @Override
-    public void addSubscriber(Subscriber<UserMessage> subscriber) {
-        userMessageSubscribers.add(subscriber);
-    }
-
-    @Override
-    public void removeSubscriber(Subscriber<UserMessage> subscriber) {
-        userMessageSubscribers.remove(subscriber);
+    public void addMessageSubscriber(MessageSubscriber subscriber){
+        messageSubscribers.add(subscriber);
     }
 }

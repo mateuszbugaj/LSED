@@ -87,8 +87,7 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
         deviceThread.start();
     }
 
-    // todo: temp, should not be public
-    @Override
+    // todo: temp, should not be public and only available by the serial port
     public void receiveMessage(ReceivedMessage receivedMessage){
         logger.debug("Received message: " + receivedMessage.getMessage());
         receivedMessages.add(receivedMessage); // todo: is this list even used?

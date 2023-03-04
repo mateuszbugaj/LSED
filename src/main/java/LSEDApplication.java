@@ -1,8 +1,5 @@
 import Devices.*;
-import StreamingService.Chat;
-import StreamingService.ChatManager;
-import StreamingService.MessageType;
-import StreamingService.UserMessage;
+import StreamingService.*;
 import Utils.LSEDConfig;
 import View.AuxiliaryWindow;
 import View.MainWindow;
@@ -20,7 +17,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.List;
 
 public class LSEDApplication extends Application {
     public static Logger logger = LoggerFactory.getLogger(LSEDApplication.class);
@@ -31,17 +28,24 @@ public class LSEDApplication extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-        Parameters parameters = getParameters();
         logger.info("LSED Start");
+        Parameters parameters = getParameters();
         stage.setTitle("LSED");
 
         logger.info("Available device ports: " + Arrays.toString(SerialPort.getCommPorts()));
         logger.info("Available camera ports: " + Webcam.getWebcams().toString());
+
         WebcamDiscoveryService discoveryService = Webcam.getDiscoveryService();
         discoveryService.stop();
         discoveryService.setEnabled(false);
 
-        DeviceManager deviceManager = new DeviceManager();
+        UserManager userManager = new UserManager(List.of());
+        ChatManager chatManager = new ChatManager(userManager);
+        ChatBuilder chatBuilder = new ChatBuilder(chatManager);
+        DeviceManager deviceManager = new DeviceManager(chatManager);
+
+        chatManager.addMessageSubscriber(deviceManager);
+        chatManager.addMessageSubscriber(userManager);
 
         Yaml yaml = new Yaml(new Constructor(LSEDConfig.class));
         InputStream inputStream = new FileInputStream(parameters.getRaw().get(0));
@@ -59,28 +63,22 @@ public class LSEDApplication extends Application {
             }
         }
 
-        ChatManager chatManager = new ChatManager();
         for(String streamConfig:lsedConfig.getStreamConfigDir()){
-            Chat chat = new Chat(streamConfig);
-            chatManager.addChat(chat);
+            ChatService chatService = chatBuilder.build(streamConfig);
+            chatManager.addChat(chatService);
         }
 
-        chatManager.update(new UserMessage("Admin", "Application start", new Date()).setMessageType(MessageType.ADMIN_MESSAGE));
-
-        MainWindow mainWindow = new MainWindow(stage, deviceManager, chatManager);
-        mainWindow.show();
-
+        MainWindow mainWindow = new MainWindow(stage, deviceManager, chatManager, userManager);
+        chatManager.addMessageSubscriber(mainWindow);
         AuxiliaryWindow auxiliaryWindow = new AuxiliaryWindow(deviceManager, chatManager);
-        auxiliaryWindow.addSubscriber(chatManager);
-
-        deviceManager.addSubscriber(chatManager);
-        chatManager.addSubscriber(deviceManager); // todo: this should subscribe to the UserCommand notifications
 
 //        todo: here to notify all DeviceChangeSubscribers
         if(deviceManager.getDevices().size() > 0){
             deviceManager.changeSelectedDevice(0);
         }
 
+        mainWindow.show();
         auxiliaryWindow.show();
+        chatManager.handleNewMessage("Application start", "Admin");
     }
 }

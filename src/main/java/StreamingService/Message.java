@@ -1,31 +1,34 @@
 package StreamingService;
 
 import Devices.Device;
-import Devices.ExternalDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
-public class UserMessage {
-    private static final Logger logger = LoggerFactory.getLogger(UserMessage.class);
+public class Message {
+    private static final Logger logger = LoggerFactory.getLogger(Message.class);
     private static Integer ID_COUNT = 0;
     private final Integer id;
-    private final String user; // todo: this will be it's own class with properties and privileges read from saved file in DB
+//    private final String user; // todo: this will be it's own class with properties and privileges read from saved file in DB
+    private final User user;
     private final String content;
     private final Date timestamp;
-    private MessageType messageType = MessageType.NONE; // Assigned by ChatManager
+    private MessageType messageType = MessageType.NONE;
+    private MessageOwnership messageOwnership = MessageOwnership.NONE;
     private Device targetDevice = null; // Assigned by DeviceManager if the messageType is USER_COMMAND
 
-    public UserMessage(String user, String content, Date timestamp) {
+    public Message(User user, String content, Date timestamp) {
         this.id = ID_COUNT++;
         this.user = user;
         this.content = content;
         this.timestamp = timestamp;
     }
 
-    public String getUser() {
+    public User getUser() {
         return user;
     }
 
@@ -48,10 +51,22 @@ public class UserMessage {
         }
     }
 
-    public UserMessage setMessageType(MessageType messageType){
+    public Message setType(MessageType messageType){
         this.messageType = messageType;
 
         return this;
+    }
+
+    public Message setOwnership(MessageOwnership messageOwnership){
+        if(this.messageOwnership == MessageOwnership.NONE){
+            this.messageOwnership = messageOwnership;
+        }
+
+        return this;
+    }
+
+    public MessageOwnership getMessageOwnership() {
+        return messageOwnership;
     }
 
     public MessageType getMessageType() {

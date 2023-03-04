@@ -1,7 +1,7 @@
 package Interpreter;
 
 import Devices.*;
-import StreamingService.UserMessage;
+import StreamingService.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,26 +191,30 @@ public class Interpreter {
     }
 
     // todo: Maybe UserMessage should not have a type but it should by a inheritance of all these different types and then Interpreter could take only sub-type of UseCommand
-    public static List<DeviceCommand> interpret(UserMessage userMessage) throws Throwable {
-        logger.debug("Interpreting UserMessage: " + userMessage);
+    public static List<DeviceCommand> interpret(Message message) throws Throwable {
+        logger.debug("Interpreting UserMessage: " + message);
         List<DeviceCommand> commandsToExecute = new ArrayList<>();
 
-//        if(!isCommand(userMessage)){
-//            logger.debug("Not a command");
-//            return deviceInstructions;
-//        }
+        if(!isCommand(message)){
+            logger.debug("Not a command");
+            return commandsToExecute;
+        }
 
-        String commandContent = userMessage.getContent().substring(1).substring(userMessage.getContent().indexOf(' ')); // Remove COMMAND_PREFIX todo: (like '!' or '/<device name>'), not sure yet
+        String commandContent = message.getContent().substring(1).substring(message.getContent().indexOf(' ')); // Remove COMMAND_PREFIX todo: (like '!' or '/<device name>'), not sure yet
         List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).toList();
         logger.debug("UserMessage split into " + commands.size() + (commands.size() < 2 ? " command: " : " commands: ") + commands);
         for(String singularCommand:commands){
             String newInstruction = "";
             String[] commandComponents = singularCommand.split(" ");
             logger.debug("Singular command split into " + commandComponents.length + (commandComponents.length < 2 ? " component: " : " components: ") + Arrays.toString(commandComponents));
-            Device targetDevice = userMessage.getTargetDevice();
+            Device targetDevice = message.getTargetDevice();
             if(targetDevice != null){
                 int userCommandParametersNumber = commandComponents.length - 1;
                 String commandPrefix = commandComponents[0];
+
+                System.out.println("targetDevice.getCommands(): " + targetDevice.getCommands());
+                System.out.println("Prefix: " + commandPrefix);
+                System.out.println("userCommandParametersNumber: " + userCommandParametersNumber);
 
                 List<DeviceCommand> deviceCommandList = targetDevice
                         .getCommands()
@@ -218,12 +222,15 @@ public class Interpreter {
                         .filter(i -> i.getPrefix().compareTo(commandPrefix) == 0)
                         .filter(i -> i.getParams().stream().filter(k -> !k.getOptional()).count() <= userCommandParametersNumber).toList();
 
+
+                System.out.println("deviceCommandList: " + deviceCommandList);
+
                 if(deviceCommandList.isEmpty()){ // todo: think how the interpreter should react on errors
                     throw new Throwable("No matching commands found in the associated device"); // todo: include information about not matching prefix or incorrect number of required parameters
                 } else {
                     logger.debug("Found " + deviceCommandList.size() + " commands with matching signature");
                     for(DeviceCommand deviceCommand:deviceCommandList){
-                        System.out.println(deviceCommand);
+                        deviceCommand.setOwner(message.getUser());
                         String targetDeviceCurrentState = targetDevice.getCurrentState();
                         if(targetDeviceCurrentState != null && !targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty()){
                             deviceCommand
@@ -312,8 +319,8 @@ public class Interpreter {
         return commandsToExecute;
     }
 
-    public static boolean isCommand(UserMessage userMessage){
-        return userMessage.getContent().startsWith(COMMAND_PREFIX);
+    public static boolean isCommand(Message message){
+        return message.getContent().startsWith(COMMAND_PREFIX);
     }
 
 }

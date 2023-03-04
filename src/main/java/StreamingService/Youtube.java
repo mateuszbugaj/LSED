@@ -1,9 +1,7 @@
 package StreamingService;
 
-import Utils.Subscriber;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.twitch4j.chat.events.channel.IRCMessageEvent;
 import javafx.scene.image.Image;
 
 import java.io.BufferedReader;
@@ -16,20 +14,23 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 public class Youtube implements ChatService{
+    private final String serviceName;
     private final String channelId;
     private final Image serviceIcon;
     private String videoId;
     private String liveChatId;
     private Thread thread;
     private final String channelApiKey;
-    private final ArrayList<UserMessage> userMessages = new ArrayList<>();
+    private final ArrayList<Message> messages = new ArrayList<>();
+    private final ChatManagerMediator mediator;
 
-    public Youtube(String channelId, String channelApiKey) {
+    public Youtube(String serviceName, String channelId, String channelApiKey, ChatManagerMediator mediator) {
+        this.serviceName = serviceName;
         this.channelId = channelId;
         this.channelApiKey = channelApiKey;
+        this.mediator = mediator;
         serviceIcon = new Image("https://cdn-icons-png.flaticon.com/512/1384/1384060.png", 20, 20, true, true); // todo: put this in the factory pattern
 
         try {
@@ -79,60 +80,62 @@ public class Youtube implements ChatService{
         return "https://www.googleapis.com/youtube/v3/" + content;
     }
 
-    private ArrayList<UserMessage> getMessages() throws IOException, ParseException {
-        ArrayList<UserMessage> messages = new ArrayList<>();
+    private ArrayList<Message> getMessages() throws IOException, ParseException {
+        ArrayList<Message> messages = new ArrayList<>();
         JsonNode liveChatMessages = getResponse(composeUrl("liveChat/messages?liveChatId=" + liveChatId + "&part=snippet,authorDetails&maxResults=2000&key=" + channelApiKey));
 
         for(JsonNode messageInfo: liveChatMessages.get("items")){
             String userName = messageInfo.get("authorDetails").get("displayName").asText();
             String content = messageInfo.get("snippet").get("displayMessage").asText();
             Date messageTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").parse(messageInfo.get("snippet").get("publishedAt").asText());
-            messages.add(new UserMessage(userName, content, messageTime));
+//            messages.add(new UserMessage(UserManager.getUser(userName), content, messageTime));
+            mediator.handleNewMessage(content, userName);
         }
 
         return messages;
     }
 
+    // todo: fix implementation
+//    @Override
+//    public void addNewMessageSubscription(ArrayList<Subscriber<UserMessage>> subscribers) {
+//        Thread thread = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (true){
+//                    try {
+//                        ArrayList<UserMessage> messages = getMessages();
+//
+//                        // todo: this could be replaced with Stack
+//                        // go through received messages and find new ones
+//                        for(UserMessage m:messages){
+//                            boolean exists = false;
+//                            for (UserMessage m2:userMessages){
+//                                if(m.getUser().equals(m2.getUser()) && m.getContent().equals(m2.getContent()) && m.getTimestamp().compareTo(m2.getTimestamp()) == 0){
+//                                    exists = true;
+//                                    break;
+//                                }
+//                            }
+//
+//                            if(!exists){
+//                                userMessages.addAll(messages);
+//                                subscribers.forEach(i -> i.update(m));
+//                            }
+//                        }
+//
+//                        Thread.sleep(1000);
+//                    } catch (InterruptedException | IOException | ParseException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        });
+//
+//        thread.start();
+//    }
+
     @Override
-    public void addNewMessageSubscription(ArrayList<Subscriber<UserMessage>> subscribers) {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true){
-                    try {
-                        ArrayList<UserMessage> messages = getMessages();
-
-                        // todo: this could be replaced with Stack
-                        // go through received messages and find new ones
-                        for(UserMessage m:messages){
-                            boolean exists = false;
-                            for (UserMessage m2:userMessages){
-                                if(m.getUser().equals(m2.getUser()) && m.getContent().equals(m2.getContent()) && m.getTimestamp().compareTo(m2.getTimestamp()) == 0){
-                                    exists = true;
-                                    break;
-                                }
-                            }
-
-                            if(!exists){
-                                userMessages.addAll(messages);
-                                subscribers.forEach(i -> i.update(m));
-                            }
-                        }
-
-                        Thread.sleep(1000);
-                    } catch (InterruptedException | IOException | ParseException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        thread.start();
-    }
-
-    @Override
-    public void sendMessage(String message) {
-        System.out.println("sending youtube message");
+    public String getName() {
+        return serviceName;
     }
 
     @Override

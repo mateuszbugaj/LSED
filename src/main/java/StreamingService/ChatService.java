@@ -5,8 +5,14 @@ import javafx.scene.image.Image;
 
 import java.util.ArrayList;
 
+//public interface ChatService {
+//    void addNewMessageSubscription(ArrayList<Subscriber<UserMessage>> subscribers);
+//    void sendMessage(String message);
+//    Image getIcon();
+//}
+
+
 public interface ChatService {
-    void addNewMessageSubscription(ArrayList<Subscriber<UserMessage>> subscribers);
-    void sendMessage(String message);
+    String getName();
     Image getIcon();
 }
