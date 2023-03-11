@@ -5,7 +5,7 @@ public enum MessageType {
     COMMAND,
     DEVICE_COMMAND,
     SYSTEM_COMMAND,
-    REQUEST_COMMAND,
+    CONTROL_COMMAND,
     ERROR,
     INFO,
     NONE

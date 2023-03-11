@@ -21,6 +21,13 @@ public class Message {
     private MessageOwnership messageOwnership = MessageOwnership.NONE;
     private Device targetDevice = null; // Assigned by DeviceManager if the messageType is USER_COMMAND
 
+    public Message(User user, String content) {
+        this.id = ID_COUNT++;
+        this.user = user;
+        this.content = content;
+        this.timestamp = new Date();
+    }
+
     public Message(User user, String content, Date timestamp) {
         this.id = ID_COUNT++;
         this.user = user;
@@ -44,11 +51,13 @@ public class Message {
         return targetDevice;
     }
 
-    public void setTargetDevice(Device targetDevice){
+    public Message setTargetDevice(Device targetDevice){
         if(this.targetDevice == null){
             logger.debug("ID " + id + " - Setting targetDevice: " + targetDevice.getName());
             this.targetDevice = targetDevice;
         }
+
+        return this;
     }
 
     public Message setType(MessageType messageType){

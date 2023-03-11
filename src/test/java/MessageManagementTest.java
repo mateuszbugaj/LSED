@@ -1,4 +1,5 @@
 import StreamingService.*;
+import Utils.ReturnMessageException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,7 @@ public class MessageManagementTest {
         String messageContent = "Message content ABC";
         String userName = "User1";
 
-        UserManager userManager = new UserManager(List.of());
+        UserManager userManager = new UserManager(List.of(), List.of());
         ChatManager chatManager = new ChatManager(userManager);
 
         // When
@@ -28,7 +29,7 @@ public class MessageManagementTest {
 
     @Test
     public void setMessageTypeTest(){
-        UserManager userManager = new UserManager(List.of());
+        UserManager userManager = new UserManager(List.of(), List.of());
         ChatManager chatManager = new ChatManager(userManager);
 
         /* USER MESSAGE */
@@ -67,8 +68,8 @@ public class MessageManagementTest {
 
         // Then
         message = chatManager.getChatMessages().get(2);
-        Assertions.assertEquals(MessageType.MESSAGE, message.getMessageType());
-        Assertions.assertEquals(MessageOwnership.ADMIN, message.getMessageOwnership());
+        Assertions.assertEquals(MessageType.ERROR, message.getMessageType());
+        Assertions.assertEquals(MessageOwnership.INTERPRETER, message.getMessageOwnership());
 
         /* ADMIN COMMAND */
         // Given
@@ -80,14 +81,14 @@ public class MessageManagementTest {
 
         // Then
         message = chatManager.getChatMessages().get(3);
-        Assertions.assertEquals(MessageType.COMMAND, message.getMessageType());
+        Assertions.assertEquals(MessageType.MESSAGE, message.getMessageType());
         Assertions.assertEquals(MessageOwnership.ADMIN, message.getMessageOwnership());
     }
 
     @Test
     public void messageSubscriptionTest(){
         // Given
-        UserManager userManager = new UserManager(List.of());
+        UserManager userManager = new UserManager(List.of(), List.of());
         ChatManager chatManager = new ChatManager(userManager);
         String messageContent = "!system abc";
         String userName = "User1";
@@ -115,5 +116,41 @@ public class MessageManagementTest {
         // Then
         Message message = chatManager.getChatMessages().get(0);
         Assertions.assertEquals(MessageType.SYSTEM_COMMAND, message.getMessageType());
+    }
+
+    @Test
+    public void messageWithErrorTest(){
+        // Given
+        UserManager userManager = new UserManager(List.of(), List.of());
+        ChatManager chatManager = new ChatManager(userManager);
+        String messageContent = "!system abc";
+        String userName = "User1";
+        String infoMessageContent = "Info message";
+
+        chatManager.addMessageSubscriber(new MessageSubscriber() {
+            private final String name = "system";
+            @Override
+            public void annotateMessage(Message message) {
+                if(message.getMessageType().equals(MessageType.COMMAND)){
+                    if(message.getContent().split(" ")[0].replaceFirst("!", "").equals(name)){
+                        message.setType(MessageType.SYSTEM_COMMAND);
+                    }
+                }
+            }
+
+            @Override
+            public void handleMessage(Message message) throws ReturnMessageException {
+                if(message.getContent().equals(messageContent)){
+                    throw new ReturnMessageException(infoMessageContent);
+                }
+            }
+        });
+
+        // When
+        chatManager.handleNewMessage(messageContent, userName);
+
+        // Then
+        Assertions.assertEquals(MessageType.SYSTEM_COMMAND, chatManager.getChatMessages().get(0).getMessageType());
+        Assertions.assertEquals(infoMessageContent, chatManager.getChatMessages().get(1).getContent());
     }
 }

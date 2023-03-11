@@ -2,15 +2,15 @@ package Interpreter;
 
 import Devices.*;
 import StreamingService.Message;
+import StreamingService.MessageType;
+import Utils.ReturnMessageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Interpreter {
     private static final Logger logger = LoggerFactory.getLogger(Interpreter.class);
@@ -44,36 +44,32 @@ public class Interpreter {
         return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents(), commandDTO.getRequiredStates(), commandDTO.getResultingState());
     }
 
-    /*
-    public static List<DeviceCommand> interpret(UserMessage userMessage) throws Throwable {
-        logger.debug("Interpreting UserMessage: " + userMessage);
+    public static List<DeviceCommand> interpret(Message message) throws ReturnMessageException {
         List<DeviceCommand> commandsToExecute = new ArrayList<>();
-
-        if(!isCommand(userMessage)){
-            logger.debug("Not a command");
+        if(!isCommand(message)){
             return commandsToExecute;
         }
+        logger.debug("Interpreting command message: " + message);
 
-        String commandContent = userMessage.getContent().substring(1).substring(userMessage.getContent().indexOf(' '));
+        String commandContent = message.getContent().substring(1).substring(message.getContent().indexOf(' '));
         List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).toList();
         logger.debug("UserMessage split into " + commands.size() + (commands.size() < 2 ? " command: " : " commands: ") + commands);
         for(String command:commands){
-            String newInstruction = "";
             String[] commandComponents = command.split(" ");
             logger.debug("Singular command split into " +
                     commandComponents.length +
                     (commandComponents.length < 2 ? " component: " : " components: ") +
                     Arrays.toString(commandComponents));
 
-            Device targetDevice = userMessage.getTargetDevice();
+            Device targetDevice = message.getTargetDevice();
             if(targetDevice == null){
-                throw new Throwable("No device");
+                throw new ReturnMessageException("No device");
             }
 
             List<DeviceCommand> deviceCommandList = checkForMatchingDeviceCommands(commandComponents, targetDevice);
-            logger.debug("Found " + deviceCommandList.size() + " commands with matching signature");
+            logger.debug("Found " + deviceCommandList.size() + " commands with matching signature: \n" + deviceCommandList.stream().map(i -> i.toString() + "\n").collect(Collectors.joining()));
             if(deviceCommandList.isEmpty()){
-                throw new Exception("No matching command found for the device.");
+                throw new ReturnMessageException("No matching command found for the device.");
             }
 
             for(DeviceCommand deviceCommand:deviceCommandList){
@@ -81,21 +77,23 @@ public class Interpreter {
                     continue;
                 }
 
-                logger.debug("Command '" + deviceCommand.getName() + "' is correct");
+                logger.debug("Command '" + deviceCommand.getName() + "' is correct: " + deviceCommand);
+                deviceCommand.setOwner(message.getUser());
 
-                List<String> instructions = getInstructions(commandComponents, deviceCommand, targetDevice);
+                List<String> instructions = getInstructions(commandComponents, deviceCommand);
                 logger.debug("Generated instructions: " + instructions);
                 deviceCommand.setDeviceInstructions(instructions);
                 commandsToExecute.add(deviceCommand);
+                break;
             }
 
             if(commandsToExecute.isEmpty()){
-                throw new Exception("Command not correct.");
+                throw new ReturnMessageException("Command not correct.");
             }
         }
 
         return commandsToExecute;
-    } */
+    }
 
     private static List<DeviceCommand> checkForMatchingDeviceCommands(String[] commandComponents, Device targetDevice){
         String commandPrefix = commandComponents[0];
@@ -130,13 +128,36 @@ public class Interpreter {
                 deviceCommands.add(deviceCommand);
             }
         }
-        return deviceCommands;
+
+        /* Segregate deviceCommands by parameter types (integers go first) */
+        List<DeviceCommand> segregatedDeviceCommands = deviceCommands.stream().sorted((o1, o2) -> {
+
+            int equalElements = 0;
+            for (int i = 0; i < o1.getParams().size(); i++) {
+
+                if (o1.getParams().get(i).getType() == DeviceCommandParamType.Integer && o2.getParams().get(i).getType() == DeviceCommandParamType.String) {
+                    return -1;
+                }
+
+                if (o1.getParams().get(i).getType() == o2.getParams().get(i).getType()) {
+                    equalElements++;
+                }
+            }
+
+            if (equalElements == o1.getParams().size()) {
+                return 0;
+            }
+
+            return 1;
+        }).toList();
+
+        return segregatedDeviceCommands;
     }
 
-    private static boolean checkForDeviceCommandCorrectness(String[] commandComponents, DeviceCommand deviceCommand, Device targetDevice) throws Exception {
+    private static boolean checkForDeviceCommandCorrectness(String[] commandComponents, DeviceCommand deviceCommand, Device targetDevice) throws ReturnMessageException {
         String targetDeviceCurrentState = targetDevice.getCurrentState();
         if(targetDeviceCurrentState != null && !targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty() && deviceCommand.getRequiredStates().stream().noneMatch(i -> i.compareTo(targetDeviceCurrentState) == 0)){
-            throw new Exception("Device needs to be in the state: " + deviceCommand.getRequiredStates());
+            throw new ReturnMessageException("Device needs to be in the state: " + deviceCommand.getRequiredStates());
         }
 
         List<DeviceCommandParam> params = deviceCommand.getParams();
@@ -145,18 +166,9 @@ public class Interpreter {
             DeviceCommandParam param = params.get(paramId);
             if(paramId < userCommandParametersNumber){
                 String commandComponent = commandComponents[paramId + 1];
-                if(param.getPossibleValues().isEmpty()){
-                    // Check if the command component is a number
-                    if(param.getType() == DeviceCommandParamType.Integer){
-                        int value = Integer.parseInt(commandComponent);
-                        if(!(value >= param.getRangeMin() && value <= param.getRangeMax())){
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if(param.getPossibleValues().stream().noneMatch(j -> j.compareTo(commandComponent) == 0)){
+                if(param.getType() == DeviceCommandParamType.Integer){
+                    int value = Integer.parseInt(commandComponent);
+                    if(!(value >= param.getRangeMin() && value <= param.getRangeMax())){
                         return false;
                     }
                 }
@@ -170,153 +182,29 @@ public class Interpreter {
         return true;
     }
 
-    private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand, Device targetDevice){
-        System.out.println(">> " + deviceCommand);
+    private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand){
         if(deviceCommand.getEvents() == null || deviceCommand.getEvents().isEmpty()){
             String instruction = deviceCommand.getDevicePrefix();
             for(int paramId = 0; paramId < deviceCommand.getParams().size(); paramId++){
+                DeviceCommandParam deviceCommandParam = deviceCommand.getParams().get(paramId);
                 if(paramId >= (commandComponents.length - 1)){
-                    instruction = instruction.concat(" ").concat(deviceCommand.getParams().get(paramId).getPredefined());
+                    instruction = instruction.concat(" ").concat(deviceCommandParam.getPredefined());
                 } else {
-                    instruction = instruction.concat(" ").concat(commandComponents[paramId+1]);
+                    String commandComponent = commandComponents[paramId + 1];
+                    if(deviceCommandParam.getPossibleValues().isEmpty() || deviceCommandParam.getPossibleValues().stream().anyMatch(j -> j.equals(commandComponent))){
+                        instruction = instruction.concat(" ").concat(commandComponent);
+                    } else {
+                        throw new RuntimeException("Parameter " + (paramId+1) + " needs to be from list: " + deviceCommandParam.getPossibleValues());
+                    }
                 }
             }
             return List.of(instruction);
         } else {
             List<String> events = deviceCommand.getEvents();
-            Collections.reverse(events);
+            // Collections.reverse(events); // todo: Why reverse?
 
             return events;
         }
-    }
-
-    // todo: Maybe UserMessage should not have a type but it should by a inheritance of all these different types and then Interpreter could take only sub-type of UseCommand
-    public static List<DeviceCommand> interpret(Message message) throws Throwable {
-        logger.debug("Interpreting UserMessage: " + message);
-        List<DeviceCommand> commandsToExecute = new ArrayList<>();
-
-        if(!isCommand(message)){
-            logger.debug("Not a command");
-            return commandsToExecute;
-        }
-
-        String commandContent = message.getContent().substring(1).substring(message.getContent().indexOf(' ')); // Remove COMMAND_PREFIX todo: (like '!' or '/<device name>'), not sure yet
-        List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).toList();
-        logger.debug("UserMessage split into " + commands.size() + (commands.size() < 2 ? " command: " : " commands: ") + commands);
-        for(String singularCommand:commands){
-            String newInstruction = "";
-            String[] commandComponents = singularCommand.split(" ");
-            logger.debug("Singular command split into " + commandComponents.length + (commandComponents.length < 2 ? " component: " : " components: ") + Arrays.toString(commandComponents));
-            Device targetDevice = message.getTargetDevice();
-            if(targetDevice != null){
-                int userCommandParametersNumber = commandComponents.length - 1;
-                String commandPrefix = commandComponents[0];
-
-                System.out.println("targetDevice.getCommands(): " + targetDevice.getCommands());
-                System.out.println("Prefix: " + commandPrefix);
-                System.out.println("userCommandParametersNumber: " + userCommandParametersNumber);
-
-                List<DeviceCommand> deviceCommandList = targetDevice
-                        .getCommands()
-                        .stream()
-                        .filter(i -> i.getPrefix().compareTo(commandPrefix) == 0)
-                        .filter(i -> i.getParams().stream().filter(k -> !k.getOptional()).count() <= userCommandParametersNumber).toList();
-
-
-                System.out.println("deviceCommandList: " + deviceCommandList);
-
-                if(deviceCommandList.isEmpty()){ // todo: think how the interpreter should react on errors
-                    throw new Throwable("No matching commands found in the associated device"); // todo: include information about not matching prefix or incorrect number of required parameters
-                } else {
-                    logger.debug("Found " + deviceCommandList.size() + " commands with matching signature");
-                    for(DeviceCommand deviceCommand:deviceCommandList){
-                        deviceCommand.setOwner(message.getUser());
-                        String targetDeviceCurrentState = targetDevice.getCurrentState();
-                        if(targetDeviceCurrentState != null && !targetDeviceCurrentState.isBlank() && !deviceCommand.getRequiredStates().isEmpty()){
-                            deviceCommand
-                                    .getRequiredStates()
-                                    .stream()
-                                    .filter(state -> state.equals(targetDeviceCurrentState))
-                                    .findAny()
-                                    .orElseThrow(new Supplier<Throwable>() {
-                                        @Override
-                                        public Throwable get() {
-                                            return new RuntimeException(
-                                                    "Device must be in the one of the required states for this command: "
-                                                            + deviceCommand.getRequiredStates()
-                                                            + ". Current state: "
-                                                            + targetDeviceCurrentState
-                                                            + "."
-                                            );
-                                        }
-                                    });
-                        }
-
-                        // todo: maybe events also could be made modifiable with parameters
-                        if(!deviceCommand.getEvents().isEmpty()){
-                            logger.debug("Using events associated with the commands");
-                            List<String> events = deviceCommand.getEvents();
-
-                            Collections.reverse(events);
-                            deviceCommand.setDeviceInstructions(events);
-                            commandsToExecute.add(deviceCommand);
-                            continue;
-                        }
-
-                        newInstruction = deviceCommand.getDevicePrefix();
-                        for(int i = 0; i< deviceCommand.getParams().size(); i++){
-                            if(i < userCommandParametersNumber){
-                                String commandComponent = commandComponents[1 + i];
-                                DeviceCommandParam param = deviceCommand.getParams().get(i);
-                                if(param.getPossibleValues().isEmpty()){
-                                    // Check if the parameter is a number
-                                    // todo: refactor
-                                    if(Pattern.compile("-?\\d+(\\.\\d+)?").matcher(commandComponent).matches()){
-                                        if(param.getType() == DeviceCommandParamType.Integer){
-                                            int value = Integer.parseInt(commandComponent);
-                                            if(value >= param.getRangeMin() && value <= param.getRangeMax()){
-                                                newInstruction = newInstruction.concat(" " + value);
-                                            } else {
-                                                // throw an error about invalid range
-                                            }
-                                        }
-                                    } else {
-                                        if(param.getType() == DeviceCommandParamType.String){
-                                            newInstruction = newInstruction.concat(" " + commandComponent);
-                                        }
-                                    }
-
-                                    deviceCommand.setDeviceInstructions(List.of(newInstruction));
-                                } else {
-                                    param.getPossibleValues().stream().filter(j -> j.compareTo(commandComponent) == 0).findAny().orElseThrow(new Supplier<Throwable>() {
-                                        @Override
-                                        public Throwable get() {
-                                            logger.error("Parameter '" + commandComponent + "' needs to be from the list " + param.getPossibleValues());
-                                            return new RuntimeException("Parameter '" + commandComponent + "' needs to be from the list " + param.getPossibleValues());
-                                        }
-                                    });
-
-                                    //todo: refactor
-                                    deviceCommand.setDeviceInstructions(List.of(newInstruction + " " + commandComponent));
-                                    commandsToExecute.add(deviceCommand);
-                                    return commandsToExecute;
-                                }
-                            } else if(deviceCommand.getParams().get(i).getPredefined() != null){
-                                logger.debug("Using default value for parameter " + i);
-                                newInstruction = newInstruction.concat(" " + deviceCommand.getParams().get(i).getPredefined());
-                            }
-                        }
-
-                        deviceCommand.setDeviceInstructions(List.of(newInstruction));
-                        commandsToExecute.add(deviceCommand);
-                    }
-                }
-
-            } else {
-                logger.debug("No device associated with the message");
-            }
-        }
-        return commandsToExecute;
     }
 
     public static boolean isCommand(Message message){

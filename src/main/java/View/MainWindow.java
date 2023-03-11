@@ -55,6 +55,15 @@ public class MainWindow implements MessageSubscriber {
         stage.show();
     }
 
+    /*
+    +----------+--------------------+
+    |          |                    |
+    | UserBox  |       ViewBox      |
+    |          |                    |
+    |          |                    |
+    |          |                    |
+    +----------+--------------------+
+     */
     private void showMainBorderPane(Stage stage){
         BorderPane mainBorderPane = new BorderPane();
         Scene scene = new Scene(mainBorderPane);
@@ -64,6 +73,21 @@ public class MainWindow implements MessageSubscriber {
         mainBorderPane.setLeft(generateUserBox());
     }
 
+    /*
+
+
+    +-----------------------------+
+    |          StatusBar          |
+    +-----------------+-----------+
+    |     ViewBox     |           |
+    |                 | DeviceBox |
+    |    MainFrame    |           |
+    |                 |           |
+    +-----------------+           |
+    |   Thumbnails    |           |
+    +-----------------+-----------+
+
+     */
     private BorderPane generateViewBox(){
         BorderPane viewBox = new BorderPane();
         viewBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
@@ -116,6 +140,15 @@ public class MainWindow implements MessageSubscriber {
         return deviceBorderPane;
     }
 
+    /*
+               viewBoxHBox
+    +--------------------------------+
+    |+-----------+ +-----------+ +---|
+    || thumbnail | | thumbnail | | th|
+    ||           | |           | |   |
+    |+-----------+ +-----------+ +---|
+    +--------------------------------+
+     */
     private HBox generateThumbnails(List<Camera> thumbnailCameraList){
         HBox viewBoxHBox = new HBox(10);
         viewBoxHBox.setMinHeight(200);
@@ -153,6 +186,31 @@ public class MainWindow implements MessageSubscriber {
         return viewBoxHBox;
     }
 
+    public static String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        return String.format("%d:%02d", minutes, remainingSeconds);
+    }
+
+    /*
+                userBox
+    /--------userBoxWidth---------/
+    +-----------------------------+
+    | +         titleBox        | |
+    | |                         | |
+    | +-------------------------+ |
+    |          userQueue          |
+    |                             |
+    |                             |
+    +-----------------------------+
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    +-----------------------------+
+     */
     private VBox generateUserBox(){
         VBox userBox = new VBox();
         int userBoxWidth = 300;
@@ -162,8 +220,16 @@ public class MainWindow implements MessageSubscriber {
         userBox.setPadding(new Insets(10));
         userBox.setSpacing(10);
 
-        // Info about user in charge or current event ect.
-        // todo: Read this from the config file and add text wrapping
+        /*
+        Info about user in charge or current event ect.
+        todo: Read this from the config file and add text wrapping
+
+              titleBox
+        +-----------------+
+        |     titleText   |
+        |   subTitleText  |
+        +-----------------+
+         */
 
         VBox titleVBox= new VBox();
         titleVBox.setSpacing(10);
@@ -189,7 +255,19 @@ public class MainWindow implements MessageSubscriber {
         titleVBox.getChildren().addAll(titleTextStackPane, subTitle);
         userBox.getChildren().add(titleVBox);
 
-        // User in control and for how long
+        /*
+        User in control and for how long
+
+               userQueue
+        +---------------------+
+        |  userInControlUsername  |
+        +---------------------+
+        |   userQueueContent  |
+        |                     |
+        |    userControlTip   |
+        +---------------------+
+
+         */
         VBox userQueueVBox= new VBox();
         userQueueVBox.setSpacing(10);
         userQueueVBox.setPadding(new Insets(10, 0, 10, 0));
@@ -200,40 +278,58 @@ public class MainWindow implements MessageSubscriber {
                 new BorderWidths(0, 0, 3, 0)
         )));
 
-        Text userInControl = new Text("No one in control");
+        /*
+                                   userInControl
+        +--------------------------------------------------------------+
+        |                                                              |
+        | userInControlUsername                     userInControlTimer |
+        |                                                              |
+        +--------------------------------------------------------------+
+         */
+        BorderPane userInControl = new BorderPane();
+
+        Text userInControlUsername = new Text("No one in control");
         Text userInControlTimer = new Text();
         userManager.getActiveUser().addListener(new ChangeListener<User>() {
             @Override
             public void changed(ObservableValue<? extends User> observableValue, User user, User newUser) {
                 if(newUser != null){
-                    userInControl.setText(newUser.getName());
+                    userInControlUsername.setText(newUser.getName());
                 } else {
-                    userInControl.setText("No one in control");
+                    userInControlUsername.setText("No one in control");
                     userInControlTimer.setText("");
                 }
             }
         });
-        userInControl.setWrappingWidth(userBoxWidth);
-        userInControl.setFont(new Font(30));
-        userInControl.setFill(Paint.valueOf("green"));
-        userQueueVBox.getChildren().add(userInControl);
+        userInControlUsername.setFont(new Font(25));
+        userInControlUsername.setFill(Paint.valueOf("green"));
 
         userManager.getActiveUserTimerSeconds().addListener(new ChangeListener<Float>() {
             @Override
             public void changed(ObservableValue<? extends Float> observable, Float oldValue, Float newValue) {
-                int minutes = (int) (newValue/60);
-                int seconds = (int) (newValue%60);
-                userInControlTimer.setText(minutes + ":" + seconds);
+                userInControlTimer.setText(formatTime(newValue.intValue()));
             }
         });
-        userInControlTimer.setFont(new Font(15));
+        userInControlTimer.setFont(new Font("Monospaced Bold", 25));
         userInControlTimer.setFill(Paint.valueOf("green"));
-        userQueueVBox.getChildren().add(userInControlTimer);
 
+        userInControl.setLeft(userInControlUsername);
+        userInControl.setRight(userInControlTimer);
+        userQueueVBox.getChildren().add(userInControl);
+
+        /*
+                                  userQueueContent
+        +--------------------------------------------------------------+
+        | userControlQueueUsername                userControlQueueTime |
+        | User1                                                      5 |
+        | User2                                                      8 |
+        | User1                                                     15 |
+        | And 8 more...                                                |
+        +--------------------------------------------------------------+
+         */
         VBox userQueueContent = new VBox();
         userQueueContent.getChildren().add(new Text(""));
 
-        //todo: implement
         userManager.getUserQueue().addListener(new ListChangeListener<UserRequest>() {
             @Override
             public void onChanged(Change<? extends UserRequest> c) {
@@ -241,11 +337,32 @@ public class MainWindow implements MessageSubscriber {
                     userQueueContent.getChildren().clear();
                     int counter = 0;
                     for(UserRequest userRequest: userManager.getUserQueue()){
-                        Text userControlQueue = new Text(userRequest.getUser().getName() + " : " + userRequest.getTimeSeconds()/60);
-                        userControlQueue.setWrappingWidth(userBoxWidth);
-                        userControlQueue.setFont(new Font(15));
-                        userControlQueue.setFill(Paint.valueOf("white"));
-                        userQueueContent.getChildren().add(userControlQueue);
+
+                        BorderPane row = new BorderPane();
+                        Text requestUsername = new Text(userRequest.getUser().getName());
+                        requestUsername.setFont(new Font(15));
+                        requestUsername.setFill(Paint.valueOf("white"));
+                        Text requestTime = new Text(formatTime(userRequest.getTimeSeconds()));
+                        requestTime.setFont(new Font(15));
+                        requestTime.setFill(Paint.valueOf("white"));
+
+                        row.setLeft(requestUsername);
+                        row.setRight(requestTime);
+
+                        userQueueContent.getChildren().addAll(row);
+
+//                        Text userControlQueueUsername = new Text(userRequest.getUser().getName());
+//                        userControlQueueUsername.setFont(new Font(15));
+//                        userControlQueueUsername.setFill(Paint.valueOf("white"));
+//                        Text userControlQueueTime = new Text(formatTime((userRequest.getTimeSeconds())));
+//                        userControlQueueTime.setFont(new Font(15));
+//                        userControlQueueTime.setFill(Paint.valueOf("white"));
+//                        HBox userControlQueueHBox = new HBox(userControlQueueUsername, userControlQueueTime);
+//
+//                        HBox.setHgrow(userControlQueueUsername, Priority.ALWAYS);
+//                        HBox.setHgrow(userControlQueueTime, Priority.ALWAYS);
+//                        userControlQueueHBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("grey"), new CornerRadii(2), Insets.EMPTY)));
+//                        userQueueContent.getChildren().add(userControlQueueHBox);
 
                         if(counter++ > 5){
                             Text queueInfo = new Text("And " + (userManager.getUserQueue().size() - 5) + " more...");
@@ -260,13 +377,47 @@ public class MainWindow implements MessageSubscriber {
             }
         });
 
+//        userManager.getUserQueue().addListener(new ListChangeListener<UserRequest>() {
+//            @Override
+//            public void onChanged(Change<? extends UserRequest> c) {
+//                Platform.runLater(() -> {
+//                    userQueueContent.getChildren().clear();
+//                    int counter = 0;
+//                    for(UserRequest userRequest: userManager.getUserQueue()){
+//                        Text userControlQueueUsername = new Text(userRequest.getUser().getName());
+////                        userControlQueueUsername.setWrappingWidth(userBoxWidth);
+//                        userControlQueueUsername.setFont(new Font(15));
+//                        userControlQueueUsername.setFill(Paint.valueOf("white"));
+//                        Text userControlQueueTime = new Text(formatTime((userRequest.getTimeSeconds())));
+//                        userControlQueueTime.setFont(new Font(15));
+//                        userControlQueueTime.setFill(Paint.valueOf("white"));
+//                        HBox userControlQueueHBox = new HBox(userControlQueueUsername, userControlQueueTime);
+//
+//                        HBox.setHgrow(userControlQueueUsername, Priority.ALWAYS);
+//                        HBox.setHgrow(userControlQueueTime, Priority.ALWAYS);
+//                        userControlQueueHBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("grey"), new CornerRadii(2), Insets.EMPTY)));
+//                        userQueueContent.getChildren().add(userControlQueueHBox);
+//
+//                        if(counter++ > 5){
+//                            Text queueInfo = new Text("And " + (userManager.getUserQueue().size() - 5) + " more...");
+//                            queueInfo.setWrappingWidth(userBoxWidth);
+//                            queueInfo.setFont(new Font(15));
+//                            queueInfo.setFill(Paint.valueOf("white"));
+//                            userQueueContent.getChildren().add(queueInfo);
+//                            break;
+//                        }
+//                    }
+//                });
+//            }
+//        });
+
         userQueueVBox.getChildren().add(userQueueContent);
 
-        Text userControlTip = new Text("Type: \n'!request <time in minutes (max 30)>'");
+        Text userControlTip = new Text("Type: \n'!request <time in minutes (max 30)>'"); // todo: take max from the config file
         userControlTip.setWrappingWidth(userBoxWidth);
         userControlTip.setFont(new Font(12));
         userControlTip.setFill(Paint.valueOf("grey"));
-        userBox.getChildren().add(userControlTip);
+        userQueueVBox.getChildren().add(userControlTip);
 
         userBox.getChildren().addAll(userQueueVBox);
 
@@ -319,10 +470,10 @@ public class MainWindow implements MessageSubscriber {
     }
 
     private TextFlow generateUserMessageCell(Message message){
-        Text date = new Text();
-        Text user = new Text();
-        Text device = new Text();
-        Text content = new Text();
+        Text date;
+        Text user;
+        Text device;
+        Text content;
 
         date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
         date.setFill(Color.LIGHTSLATEGREY);
@@ -331,85 +482,50 @@ public class MainWindow implements MessageSubscriber {
         user.setFill(Color.GREY);
 
         if(message.getTargetDevice() == null){
-            device = new Text("/");
+            device = new Text("");
+
         } else {
             device = new Text("/" + message.getTargetDevice().getName());
         }
         device.setFill(Color.GREY);
 
-        content = new Text(message.getContent());
+        content = new Text(" " + message.getContent());
         content.setFill(Color.GREY);
 
-//        switch (message.getMessageType()){
-//            case MESSAGE -> {
-//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
-//                date.setFill(Color.LIGHTSLATEGREY);
-//
-//                user = new Text(message.getUser().getName() + ": ");
-//                user.setFill(Color.MEDIUMSEAGREEN);
-//
-//                content = new Text(" $ " + message.getContent());
-//                content.setFill(Color.GREY);
-//            }
-//
-//            case DEVICE_COMMAND -> {
-//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
-//                date.setFill(Color.LIGHTSLATEGREY);
-//
-//                user = new Text(message.getUser().getName() + ": ");
-//                user.setFill(Color.MEDIUMSEAGREEN);
-//
-//                if(message.getTargetDevice() == null){
-//                    device = new Text("/");
-//                } else {
-//                    device = new Text("/" + message.getTargetDevice().getName());
-//                }
-//                device.setFill(Color.POWDERBLUE);
-//
-//                String contentSubstring =
-//                        message.getContent().contains(" ") ?
-//                                message.getContent().substring(message.getContent().indexOf(" ") + 1) :
-//                                message.getContent();
-//
-//                content = new Text(" $ " + contentSubstring);
-//                content.setFill(Color.WHITE);
-//            }
-//
-//            case ADMIN_MESSAGE -> {
-//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
-//                date.setFill(Color.LIGHTSLATEGREY);
-//
-//                user = new Text(message.getUser().getName());
-//                user.setFill(Color.TOMATO);
-//
-//                //todo: Should admin message contain info about the device
-////                if(userMessage.getTargetDevice() == null){
-////                    device = new Text("/");
-////                } else {
-////                    device = new Text("/" + userMessage.getTargetDevice().getDeviceName());
-////                }
-////                device.setFill(Color.POWDERBLUE);
-//
-//                content = new Text("$ " + message.getContent());
-//                content.setFill(Color.WHITE);
-//            }
-//
-//            case ERROR -> {
-//                content = new Text(message.getContent());
-//                content.setFill(Color.TOMATO);
-//            }
-//
-//            case NONE -> {
-//                date = new Text("[" + new SimpleDateFormat("HH:mm:ss").format(message.getTimestamp()) + "] ");
-//                date.setFill(Color.LIGHTSLATEGREY);
-//
-//                user = new Text(message.getUser().getName() + ": ");
-//                user.setFill(Color.GREY);
-//
-//                content = new Text(message.getContent());
-//                content.setFill(Color.GREY);
-//            }
-//        }
+        switch (message.getMessageOwnership()){
+            case USER -> {
+                user.setFill(Color.MEDIUMSEAGREEN);
+            }
+
+            case ADMIN -> {
+                user.setFill(Color.RED);
+            }
+
+            case INTERPRETER -> {
+                date.setText("");
+                user.setText("");
+            }
+
+        }
+
+        switch (message.getMessageType()){
+            case MESSAGE -> {
+                content.setFill(Color.GREY);
+            }
+
+            case COMMAND, DEVICE_COMMAND, SYSTEM_COMMAND, CONTROL_COMMAND -> {
+                content.setFill(Color.WHITE);
+                device.setFill(Color.POWDERBLUE);
+            }
+
+            case ERROR -> {
+                content.setFill(Color.RED);
+            }
+
+            case INFO -> {
+                content.setFill(Color.SKYBLUE);
+            }
+        }
 
         TextFlow textFlow = new TextFlow();
         if(!date.getText().isEmpty()) textFlow.getChildren().add(date);

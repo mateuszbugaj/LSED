@@ -39,10 +39,10 @@ public class LSEDApplication extends Application {
         discoveryService.stop();
         discoveryService.setEnabled(false);
 
-        UserManager userManager = new UserManager(List.of());
+        UserManager userManager = new UserManager(List.of(), List.of("Admin")); // todo: These lists should be read from the LSED config file
         ChatManager chatManager = new ChatManager(userManager);
         ChatBuilder chatBuilder = new ChatBuilder(chatManager);
-        DeviceManager deviceManager = new DeviceManager(chatManager);
+        DeviceManager deviceManager = new DeviceManager(chatManager, userManager);
 
         chatManager.addMessageSubscriber(deviceManager);
         chatManager.addMessageSubscriber(userManager);

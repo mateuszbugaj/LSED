@@ -5,6 +5,7 @@ import Devices.DeviceCommand;
 import Devices.DeviceCommandParam;
 import Devices.DeviceCommandParamType;
 import Interpreter.Interpreter;
+import Utils.ReturnMessageException;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -19,41 +20,99 @@ public class UserManager implements MessageSubscriber, Device {
     private SimpleObjectProperty<User> activeUser;
     private SimpleObjectProperty<Float> activeUserTimerSeconds;
     private ObservableList<UserRequest> userQueue = FXCollections.observableArrayList();
-    private final List<String > bannedUserNames;
     private final Thread stopwatchThread;
     private final String systemName = "control";
     private final List<DeviceCommand> systemCommands = new ArrayList<>();
 
-    public UserManager(List<String> bannedUserNames){
-        this.bannedUserNames = bannedUserNames;
+    public UserManager(List<String> bannedUserNames, List<String> adminUserNames){
+        for(String username:bannedUserNames){
+            User user = new User(username);
+            user.setBanned(true);
+            users.add(user);
+        }
+
+        for(String username:adminUserNames){
+            User user = new User(username);
+            user.giveAdminPrivileges();
+            users.add(user);
+        }
+
         activeUser = new SimpleObjectProperty<>();
         activeUser.set(null);
 
         activeUserTimerSeconds = new SimpleObjectProperty<>();
         activeUserTimerSeconds.set(0f);
 
-        DeviceCommandParam requestCommandTimeParam = new DeviceCommandParam(
-                "Request Time",
-                DeviceCommandParamType.Integer,
-                List.of(),
-                3,
-                10,
-                false,
-                "10"
-        );
-
         DeviceCommand requestCommand = new DeviceCommand(
                 "Request control",
                 "Request control over devices by specifying number of minutes and enter the queue.",
                 "request",
                 "request",
-                List.of(requestCommandTimeParam),
+                List.of(new DeviceCommandParam(
+                        "Request Time",
+                        DeviceCommandParamType.Integer,
+                        List.of(),
+                        3,
+                        10, // todo: max request time should be read from the config file
+                        false,
+                        "10"),
+                        new DeviceCommandParam(
+                                "Username",
+                                DeviceCommandParamType.String,
+                                List.of(),
+                                0,
+                                0,
+                                true,
+                                "")
+                ),
                 List.of(),
                 List.of(),
                 ""
         );
 
         systemCommands.add(requestCommand);
+
+        DeviceCommand banUserCommand = new DeviceCommand(
+                "Ban User",
+                "Ban user by username",
+                "ban",
+                "ban",
+                List.of(new DeviceCommandParam(
+                        "User name",
+                        DeviceCommandParamType.String,
+                        List.of(),
+                        0,
+                        0,
+                        false,
+                        "")
+                ),
+                List.of(),
+                List.of(),
+                ""
+        );
+
+        systemCommands.add(banUserCommand);
+
+        DeviceCommand unbanUserCommand = new DeviceCommand(
+                "Unban User",
+                "Unban user by username",
+                "unban",
+                "unban",
+                List.of(new DeviceCommandParam(
+                        "User name",
+                        DeviceCommandParamType.String,
+                        List.of(),
+                        0,
+                        0,
+                        false,
+                        "")
+                ),
+                List.of(),
+                List.of(),
+                ""
+        );
+
+        systemCommands.add(unbanUserCommand);
 
         stopwatchThread = new Thread(new Runnable() {
             @Override
@@ -102,12 +161,6 @@ public class UserManager implements MessageSubscriber, Device {
         return activeUserTimerSeconds;
     }
 
-    private void timeCounter(){
-        //todo: thread counting down the activeUserTimerSeconds and frees the activeUser field
-
-        // todo: if the userQueue is not empty, pop the user and start counting
-    }
-
     public User getUser(String name){
         Optional<User> optionalUser = users.stream().filter(user -> Objects.equals(user.getName(), name)).findAny();
         if(optionalUser.isPresent()){
@@ -138,41 +191,22 @@ public class UserManager implements MessageSubscriber, Device {
     public void annotateMessage(Message message) {
         if(message.getMessageType().equals(MessageType.COMMAND)){
             String target = message.getContent().split(" ")[0].replaceFirst("!", "");
-            String command = message.getContent().split(" ")[1].replaceFirst("!", "");
-            if(target.equals(systemName) && command.equals("request")){
+            if(target.equals(systemName)){
                 message.setTargetDevice(this);
-                message.setType(MessageType.REQUEST_COMMAND);
+                message.setType(MessageType.CONTROL_COMMAND);
             }
         }
     }
 
     @Override
-    public void handleMessage(Message message) {
-        logger.debug("Got message: " + message);
-
-        if(message.getMessageType().equals(MessageType.REQUEST_COMMAND)){
-            try {
-                List<DeviceCommand> commandList = Interpreter.interpret(message);
-                for(DeviceCommand command:commandList){
-                    addCommandToExecute(command);
-                }
-
-            } catch (Throwable e) {
-                throw new RuntimeException(e);
+    public void handleMessage(Message message) throws ReturnMessageException {
+        if(message.getMessageType().equals(MessageType.CONTROL_COMMAND)){
+            List<DeviceCommand> commandList = Interpreter.interpret(message);
+            for(DeviceCommand command:commandList){
+                addCommandToExecute(command);
             }
         }
 
-//        // todo: think about how to make interpreter interpret this command. Right now UserManager would have to be an Device impl but that would require too much unused methods to be in this class. Similarly, DeviceManager which also implements the Device interface only for its 4 commands to be interpreted by the Interpreter wouldn't have to be a device if Interpreter would work differently and recognize external devices and system components
-//        if(message.getContent().startsWith("!request")){
-//            String[] components = message.getContent().split(" ");
-//            int duration = Integer.parseInt(components[1]);
-//            if(duration <= 15 && duration > 0){
-//                addRequest(message.getUser(), duration);
-//            } else {
-//                // todo: notify user about wrong parameters. Maybe throw a custom exception with Interpreter Message inside of it so when Chat Manager notifies all subscribers it can catch all messages about errors? And also then there would be less or no need for mediator
-//                logger.error("Duration must be between 0 and 15 minutes");
-//            }
-//        }
     }
 
     @Override
@@ -181,24 +215,53 @@ public class UserManager implements MessageSubscriber, Device {
     }
 
     @Override
-    public void addCommandToExecute(DeviceCommand command) {
+    public void addCommandToExecute(DeviceCommand command) throws ReturnMessageException {
         String instruction = command.getDeviceInstructions().pop();
 
-        if(instruction.split(" ")[0].equals("request")){
-            int requestTime = Integer.parseInt(instruction.split(" ")[1]);
-            String requestOwner = command.getOwner().getName();
-            logger.debug("New request for user " + requestOwner + " : " + requestTime + "min");
+        String commandPrefix = instruction.split(" ")[0];
+        switch (commandPrefix){
+            case "request" -> {
+                int requestTime = Integer.parseInt(instruction.split(" ")[1]);
+                String requestOwner;
 
-            if(bannedUserNames.contains(requestOwner)){
-                // todo: notify that user is banned or not?
-                return;
+                if(instruction.split(" ").length == 3){
+                    if(command.getOwner().hasAdminPrivileges()){
+                        requestOwner = instruction.split(" ")[2];
+                    } else {
+                        throw new ReturnMessageException("Needs admin privilege");
+                    }
+                } else {
+                    requestOwner = command.getOwner().getName();
+                }
+
+
+                logger.debug("New request for user " + requestOwner + " : " + requestTime + "min");
+
+                if(getUser(requestOwner).isBanned()){
+                    throw new ReturnMessageException("User " + requestOwner + " is banned from controlling the machine!");
+                }
+
+                addRequest(getUser(requestOwner), requestTime);
+            }
+            case "ban" -> {
+                String userName = instruction.split(" ")[1];
+                User user = getUser(userName);
+                user.setBanned(true);
+                throw new ReturnMessageException("User " + userName + " is now banned.", MessageType.INFO);
             }
 
-            addRequest(command.getOwner(), requestTime);
+            case "unban" -> {
+                String userName = instruction.split(" ")[1];
+                User user = getUser(userName);
+                user.setBanned(true);
+                if(user.isBanned()){
+                    user.setBanned(false);
+                    throw new ReturnMessageException("User " + userName + " is now unbanned.", MessageType.INFO);
+                } else {
+                    throw new ReturnMessageException("User " + userName + " is not on banned list.", MessageType.ERROR);
+                }
+            }
         }
-
-        // todo: create new request and add it to the queue
-
     }
 
     @Override
