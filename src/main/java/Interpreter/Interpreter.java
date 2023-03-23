@@ -66,6 +66,11 @@ public class Interpreter {
                 throw new ReturnMessageException("No device");
             }
 
+            if(commandComponents.length >= 2 && commandComponents[1].equals("help")){
+                String commandsHelp = targetDevice.getCommands().stream().filter(i -> i.getPrefix().equals(commandComponents[0])).map(DeviceCommand::getHelpMessage).collect(Collectors.joining());
+                throw new ReturnMessageException(commandsHelp, MessageType.INFO);
+            }
+
             List<DeviceCommand> deviceCommandList = checkForMatchingDeviceCommands(commandComponents, targetDevice);
             logger.debug("Found " + deviceCommandList.size() + " commands with matching signature: \n" + deviceCommandList.stream().map(i -> i.toString() + "\n").collect(Collectors.joining()));
             if(deviceCommandList.isEmpty()){

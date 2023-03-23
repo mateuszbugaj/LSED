@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
+import java.util.Comparator;
 import java.util.List;
 
 // The view class
@@ -32,6 +32,8 @@ public class MainWindow implements MessageSubscriber {
     private final Stage stage;
     private final DeviceManager deviceManager;
     private final ChatManager chatManager;
+    private final ArrayList<Message> messages = new ArrayList<>();
+    private final VBox messageCellList = new VBox();
     private final UserManager userManager;
 
     public MainWindow(Stage s, DeviceManager deviceManager, ChatManager chatManager, UserManager userManager){
@@ -351,19 +353,6 @@ public class MainWindow implements MessageSubscriber {
 
                         userQueueContent.getChildren().addAll(row);
 
-//                        Text userControlQueueUsername = new Text(userRequest.getUser().getName());
-//                        userControlQueueUsername.setFont(new Font(15));
-//                        userControlQueueUsername.setFill(Paint.valueOf("white"));
-//                        Text userControlQueueTime = new Text(formatTime((userRequest.getTimeSeconds())));
-//                        userControlQueueTime.setFont(new Font(15));
-//                        userControlQueueTime.setFill(Paint.valueOf("white"));
-//                        HBox userControlQueueHBox = new HBox(userControlQueueUsername, userControlQueueTime);
-//
-//                        HBox.setHgrow(userControlQueueUsername, Priority.ALWAYS);
-//                        HBox.setHgrow(userControlQueueTime, Priority.ALWAYS);
-//                        userControlQueueHBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("grey"), new CornerRadii(2), Insets.EMPTY)));
-//                        userQueueContent.getChildren().add(userControlQueueHBox);
-
                         if(counter++ > 5){
                             Text queueInfo = new Text("And " + (userManager.getUserQueue().size() - 5) + " more...");
                             queueInfo.setWrappingWidth(userBoxWidth);
@@ -377,40 +366,6 @@ public class MainWindow implements MessageSubscriber {
             }
         });
 
-//        userManager.getUserQueue().addListener(new ListChangeListener<UserRequest>() {
-//            @Override
-//            public void onChanged(Change<? extends UserRequest> c) {
-//                Platform.runLater(() -> {
-//                    userQueueContent.getChildren().clear();
-//                    int counter = 0;
-//                    for(UserRequest userRequest: userManager.getUserQueue()){
-//                        Text userControlQueueUsername = new Text(userRequest.getUser().getName());
-////                        userControlQueueUsername.setWrappingWidth(userBoxWidth);
-//                        userControlQueueUsername.setFont(new Font(15));
-//                        userControlQueueUsername.setFill(Paint.valueOf("white"));
-//                        Text userControlQueueTime = new Text(formatTime((userRequest.getTimeSeconds())));
-//                        userControlQueueTime.setFont(new Font(15));
-//                        userControlQueueTime.setFill(Paint.valueOf("white"));
-//                        HBox userControlQueueHBox = new HBox(userControlQueueUsername, userControlQueueTime);
-//
-//                        HBox.setHgrow(userControlQueueUsername, Priority.ALWAYS);
-//                        HBox.setHgrow(userControlQueueTime, Priority.ALWAYS);
-//                        userControlQueueHBox.setBackground(new Background(new BackgroundFill(Paint.valueOf("grey"), new CornerRadii(2), Insets.EMPTY)));
-//                        userQueueContent.getChildren().add(userControlQueueHBox);
-//
-//                        if(counter++ > 5){
-//                            Text queueInfo = new Text("And " + (userManager.getUserQueue().size() - 5) + " more...");
-//                            queueInfo.setWrappingWidth(userBoxWidth);
-//                            queueInfo.setFont(new Font(15));
-//                            queueInfo.setFill(Paint.valueOf("white"));
-//                            userQueueContent.getChildren().add(queueInfo);
-//                            break;
-//                        }
-//                    }
-//                });
-//            }
-//        });
-
         userQueueVBox.getChildren().add(userQueueContent);
 
         Text userControlTip = new Text("Type: \n'!request <time in minutes (max 30)>'"); // todo: take max from the config file
@@ -421,42 +376,11 @@ public class MainWindow implements MessageSubscriber {
 
         userBox.getChildren().addAll(userQueueVBox);
 
-        // All user messages (or only valid commands?)
-        VBox commands = new VBox();
-        commands.setSpacing(10);
-        commands.setPrefHeight(2000);
-        commands.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
+        messageCellList.setSpacing(10);
+        messageCellList.setPrefHeight(2000);
+        messageCellList.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
 
-        // todo: this may be not needed as there is no messages from users at the start of the program
-        for(Message message : chatManager.getChatMessages()){
-            Pane cell = generateUserMessageCell(message);
-            cell.setRotate(180);
-            commands.getChildren().add(0, cell);
-        }
-
-        chatManager.getChatMessages().addListener(new ListChangeListener<Message>() {
-            @Override
-            public void onChanged(Change<? extends Message> c) {
-                Platform.runLater(() -> {
-                    try{
-                        commands.getChildren().clear();
-
-                        // todo: DRY
-                        for(Message message : chatManager.getChatMessages()){
-                            if(!message.getContent().contains("Index 1 out of bounds for length 1")) { // todo: temp and dirty solution
-                                Pane cell = generateUserMessageCell(message);
-                                cell.setRotate(180);
-                                commands.getChildren().add(0, cell);
-                            }
-                        }
-                    } catch (ConcurrentModificationException e){
-                        System.out.println("Exception 1");
-                    }
-                });
-            }
-        });
-
-        ScrollPane scrollPane = new ScrollPane(commands);
+        ScrollPane scrollPane = new ScrollPane(messageCellList);
         scrollPane.setPrefHeight(2000);
         scrollPane.setRotate(180);
         scrollPane.setBackground(new Background(new BackgroundFill(Paint.valueOf("black"), CornerRadii.EMPTY, Insets.EMPTY)));
@@ -482,14 +406,14 @@ public class MainWindow implements MessageSubscriber {
         user.setFill(Color.GREY);
 
         if(message.getTargetDevice() == null){
-            device = new Text("");
+            device = new Text(" ");
 
         } else {
-            device = new Text("/" + message.getTargetDevice().getName());
+            device = new Text("/" + message.getTargetDevice().getName() + " ");
         }
         device.setFill(Color.GREY);
 
-        content = new Text(" " + message.getContent());
+        content = new Text(message.getContent());
         content.setFill(Color.GREY);
 
         switch (message.getMessageOwnership()){
@@ -504,6 +428,11 @@ public class MainWindow implements MessageSubscriber {
             case INTERPRETER -> {
                 date.setText("");
                 user.setText("");
+                device.setText("");
+            }
+
+            case NONE -> {
+
             }
 
         }
@@ -514,6 +443,11 @@ public class MainWindow implements MessageSubscriber {
             }
 
             case COMMAND, DEVICE_COMMAND, SYSTEM_COMMAND, CONTROL_COMMAND -> {
+                if(device.getText().isEmpty()){
+                    content.setText(message.getContent());
+                } else {
+                    content.setText(message.getContent().substring(message.getContent().indexOf(" ")));
+                }
                 content.setFill(Color.WHITE);
                 device.setFill(Color.POWDERBLUE);
             }
@@ -524,6 +458,10 @@ public class MainWindow implements MessageSubscriber {
 
             case INFO -> {
                 content.setFill(Color.SKYBLUE);
+            }
+
+            case NONE -> {
+
             }
         }
 
@@ -835,6 +773,15 @@ public class MainWindow implements MessageSubscriber {
 
     @Override
     public void handleMessage(Message message) {
-        // todo: refresh messages (potential replacement for list listener)
+        messages.add(message);
+        messages.sort(Comparator.comparing(Message::getTimestamp));
+        if(messages.size() > 100) messages.subList(messages.size() - 100, messages.size()); // cap size at 100
+
+        messageCellList.getChildren().clear();
+        for(Message msg: messages){
+            Pane cell = generateUserMessageCell(msg);
+            cell.setRotate(180);
+            messageCellList.getChildren().add(0, cell);
+        }
     }
 }

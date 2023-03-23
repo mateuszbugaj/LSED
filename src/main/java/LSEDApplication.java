@@ -79,6 +79,6 @@ public class LSEDApplication extends Application {
 
         mainWindow.show();
         auxiliaryWindow.show();
-        chatManager.handleNewMessage("Application start", "Admin");
+        chatManager.handleNewMessage(new Message(userManager.getUser("Admin"), "Application start").setType(MessageType.INFO));
     }
 }

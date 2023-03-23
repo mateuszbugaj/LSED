@@ -2,8 +2,6 @@ package StreamingService;
 
 import Interpreter.Interpreter;
 import Utils.ReturnMessageException;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +10,7 @@ import java.util.*;
 public class ChatManager implements ChatManagerMediator{
     private static final Logger logger = LoggerFactory.getLogger(ChatManager.class);
     private final ArrayList<ChatService> chats = new ArrayList<>();
-    private final ObservableList<Message> chatMessages = FXCollections.observableArrayList();
+    private final ArrayList<Message> chatMessages = new ArrayList<>();
     private final UserManager userManager;
     private final List<MessageSubscriber> messageSubscribers;
 
@@ -30,7 +28,7 @@ public class ChatManager implements ChatManagerMediator{
         return new ArrayList<>(chats);
     }
 
-    public ObservableList<Message> getChatMessages() {
+    public ArrayList<Message> getChatMessages() {
         return chatMessages;
     }
 

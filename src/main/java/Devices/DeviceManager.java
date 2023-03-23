@@ -195,9 +195,17 @@ public class DeviceManager implements Device, MessageSubscriber {
                     message.getTargetDevice().addCommandToExecute(command);
                 }
 
-            } catch (Throwable e){
-                logger.error(e.toString());
-                throw new ReturnMessageException(e.getMessage());
+            } catch (ReturnMessageException infoException){
+                logger.error(infoException.toString());
+
+                 /* Sometimes the error gets send to the MainWindow before the actual message.
+                    This short delay allows the command to be displayed before it. */
+                 try {
+                     Thread.sleep(10);
+                 } catch (InterruptedException e) {
+                     e.printStackTrace();
+                 }
+                throw infoException;
             }
         }
     }

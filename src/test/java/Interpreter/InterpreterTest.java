@@ -219,4 +219,20 @@ public class InterpreterTest {
 
         Assertions.assertEquals("Parameter 1 needs to be from list: " + possibleValues, exception.getMessage());
     }
+
+    @Test
+    public void interpretCommandHelpTest() {
+        UserManager userManager = new UserManager(List.of(), List.of());
+
+        DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.String, List.of("ABC", "XXX"), 0, 0, false, "");
+        DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of(), "");
+        ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "");
+        Message userMessage = new Message(userManager.getUser("User1"), "!dev1 CM1 help", new Date());
+        userMessage.setTargetDevice(externalDevice);
+
+        Exception exception = Assertions.assertThrows(Exception.class, () -> Interpreter.interpret(userMessage));
+
+        System.out.println(exception.getMessage());
+//        Assertions.assertEquals("Z", exception.getMessage());
+    }
 }

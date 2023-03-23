@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 // todo: this class should be immutable
 public class DeviceCommand{
@@ -81,9 +82,21 @@ public class DeviceCommand{
         this.owner = owner;
     }
 
+    public String getHelpMessage(){
+        String parameters = params.stream().map(i ->
+                "\n - " + i.getName() + " (" + i.getType() + ')' +
+                        (i.getPossibleValues().isEmpty()?"":"\n   " + i.getPossibleValues().toString()) +
+                        (!i.getOptional()?"":"\n   " + "Optional") +
+                        (!i.getPredefined().isEmpty()?"":"\n   " + i.getPredefined())).collect(Collectors.joining());
+
+        return "$ " + name + '\n' +
+                description +
+                "\nParameters:" +
+                parameters;
+    }
+
     @Override
     public String toString() {
-        //todo: modify it so that it can be displayed as manual for the command for the users
         return "DeviceCommand{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
