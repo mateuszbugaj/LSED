@@ -1,6 +1,8 @@
 package StreamingService;
 
 import Interpreter.Interpreter;
+import Utils.LSEDConfig;
+import Utils.LogRegister;
 import Utils.ReturnMessageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +47,7 @@ public class ChatManager implements ChatManagerMediator{
     public void handleNewMessage(Message newMessage) {
         MessageOwnership messageOwnership;
         String messageOwner = newMessage.getUser().getName();
-        if(userManager.getUser(messageOwner).hasAdminPrivileges()) {
+        if(userManager.getUser(messageOwner).isAdmin()) {
             messageOwnership = MessageOwnership.ADMIN;
         } else if(messageOwner.equals("Interpreter")){
             messageOwnership = MessageOwnership.INTERPRETER;
@@ -64,6 +66,7 @@ public class ChatManager implements ChatManagerMediator{
         chatMessages.add(newMessage);
         messageSubscribers.forEach(sub -> sub.annotateMessage(newMessage));
 
+        LSEDConfig.get().getLogRegister().log(newMessage);
         messageSubscribers.forEach(sub -> {
             try {
                 sub.handleMessage(newMessage);
@@ -75,7 +78,7 @@ public class ChatManager implements ChatManagerMediator{
         });
 
         if(newMessage.getMessageType() == MessageType.COMMAND){
-            // If command message is not DEVICE_COMMAND, SYSTEM_COMMAND nor CONTROL_COMMAND then it is invalid
+            /* If command message is not DEVICE_COMMAND, SYSTEM_COMMAND nor CONTROL_COMMAND then it is invalid */
             Message infoMessage = new Message(userManager.getUser("Interpreter"), "Device not found").setType(MessageType.ERROR);
             handleNewMessage(infoMessage);
         }

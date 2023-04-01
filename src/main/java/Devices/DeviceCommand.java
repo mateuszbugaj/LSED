@@ -87,7 +87,7 @@ public class DeviceCommand{
                 "\n - " + i.getName() + " (" + i.getType() + ')' +
                         (i.getPossibleValues().isEmpty()?"":"\n   " + i.getPossibleValues().toString()) +
                         (!i.getOptional()?"":"\n   " + "Optional") +
-                        (!i.getPredefined().isEmpty()?"":"\n   " + i.getPredefined())).collect(Collectors.joining());
+                        ((i.getPredefined()==null||!i.getPredefined().isEmpty())?"":"\n   " + i.getPredefined())).collect(Collectors.joining());
 
         return "$ " + name + '\n' +
                 description +

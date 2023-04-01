@@ -1,0 +1,11 @@
+userDatabaseDir: "src/main/resources/userDatabase.json" # Default path
+chatLogDir: "chatLog/"
+
+adminUsers:
+  - "anotherAdmin"
+
+deviceConfigDir:
+  - "deviceConfigFiles/exampleDevice.yaml"
+
+streamConfigDir:
+  -

@@ -24,7 +24,7 @@ class DeviceManagerTest {
             }
         };
 
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         DeviceManager deviceManager = new DeviceManager(chatManagerMediator, userManager);
 
         DeviceCommandParam deviceCommandParam = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "0");
@@ -64,7 +64,7 @@ class DeviceManagerTest {
             }
         };
 
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         DeviceManager deviceManager = new DeviceManager(chatManagerMediator, userManager);
 
         Message message = new Message(userManager.getUser("User1"), "!dev1 com1 10");

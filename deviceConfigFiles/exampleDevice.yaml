@@ -1,0 +1,34 @@
+name: 'ExampleDevice'
+#portName: ttyUSB1
+#portBaudRate: 9600
+initialState: "" # Not a state machine
+#cameras:
+#  - name: "View 1"
+#    portName: "/dev/video0"
+
+commands:
+  - name: "Send values"
+    description: "Send integer value to the device"
+    prefix: "send"
+    devicePrefix: ">"
+    params:
+      - name: "Positive Integer"
+        type: Integer
+        range: [0, 100]
+  - name: "Send values"
+    description: "Send selected values to the device"
+    prefix: "send"
+    devicePrefix: ">"
+    params:
+      - name: "Chars"
+        type: String
+        values: ["abc", "xxx", "yyy"]
+  - name: "Send scenario"
+    description: "Send a list of predefined values to the device"
+    prefix: "send_1"
+    events: [
+      "ABC",
+      "XXX",
+      "YYY",
+      "ZZZ"
+    ]

@@ -69,7 +69,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithOneIntegerParameterTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
@@ -84,7 +84,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithOneIntegerParameterAndOneStringParameterTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
@@ -100,7 +100,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithOneIntegerParameterAndOneStringParameterAndTwoCommandsWithTheSameNameAndNumberOfParametersTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
@@ -120,7 +120,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretAMessageContainingCommandWithTheSameNameAndDifferentNumberOfParametersTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.String, List.of("ABC", "XXX"), null, null, false, "");
@@ -140,7 +140,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithEventsTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(), List.of("ABC", "XXX", "YYY"), List.of("State1", "State2"), "State3");
         ExternalDevice externalDevice = new ExternalDevice("dev1", null, List.of(), List.of(deviceCommand), "State1");
@@ -154,7 +154,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandForDeviceWithIncorrectInitialStateTest() {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
@@ -171,7 +171,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithIncorrectSignatureTest() {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of("State1", "State2"), "State3");
@@ -188,7 +188,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithOptionalParametersTest() throws Throwable {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.Integer, List.of(), 0, 100, false, "");
         DeviceCommandParam param2 = new DeviceCommandParam("Param2", DeviceCommandParamType.Integer, List.of(), 0, 100, true, "0");
@@ -204,7 +204,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandWithParametersNotFromTheListTest() {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         List<String> possibleValues = List.of("ABC", "XXX");
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.String, possibleValues, 0, 0, false, "");
@@ -222,7 +222,7 @@ public class InterpreterTest {
 
     @Test
     public void interpretCommandHelpTest() {
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         DeviceCommandParam param1 = new DeviceCommandParam("Param1", DeviceCommandParamType.String, List.of("ABC", "XXX"), 0, 0, false, "");
         DeviceCommand deviceCommand = new DeviceCommand("Command 1", "Command 1", "CM1", "cm_1", List.of(param1), List.of(), List.of(), "");

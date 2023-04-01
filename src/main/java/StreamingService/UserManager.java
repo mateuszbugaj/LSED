@@ -5,6 +5,7 @@ import Devices.DeviceCommand;
 import Devices.DeviceCommandParam;
 import Devices.DeviceCommandParamType;
 import Interpreter.Interpreter;
+import Utils.LSEDConfig;
 import Utils.ReturnMessageException;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -16,25 +17,25 @@ import java.util.*;
 
 public class UserManager implements MessageSubscriber, Device {
     private static final Logger logger = LoggerFactory.getLogger(UserManager.class);
-    private final List<User> users = new ArrayList<>();
     private SimpleObjectProperty<User> activeUser;
     private SimpleObjectProperty<Float> activeUserTimerSeconds;
     private ObservableList<UserRequest> userQueue = FXCollections.observableArrayList();
     private final Thread stopwatchThread;
     private final String systemName = "control";
     private final List<DeviceCommand> systemCommands = new ArrayList<>();
+    private final UserDatabase userDatabase;
 
-    public UserManager(List<String> bannedUserNames, List<String> adminUserNames){
-        for(String username:bannedUserNames){
-            User user = new User(username);
-            user.setBanned(true);
-            users.add(user);
-        }
+    public UserManager(List<String> adminUserNames){
+        userDatabase = new UserDatabase(LSEDConfig.get().getUserDatabaseDir());
 
-        for(String username:adminUserNames){
-            User user = new User(username);
-            user.giveAdminPrivileges();
-            users.add(user);
+        /* Create the Admin user just right here */
+        giveAdminPrivileges(getUser("Admin"));
+
+        if(adminUserNames != null){
+            for(String username:adminUserNames){
+                User user = getUser(username);
+                giveAdminPrivileges(user);
+            }
         }
 
         activeUser = new SimpleObjectProperty<>();
@@ -162,19 +163,19 @@ public class UserManager implements MessageSubscriber, Device {
     }
 
     public User getUser(String name){
-        Optional<User> optionalUser = users.stream().filter(user -> Objects.equals(user.getName(), name)).findAny();
+        Optional<User> optionalUser = userDatabase.get().stream().filter(user -> Objects.equals(user.getName(), name)).findAny();
         if(optionalUser.isPresent()){
             return optionalUser.get();
         }
 
         User user = new User(name);
         logger.debug("New user added: " + user.getName());
-        users.add(user);
+        userDatabase.add(user);
         return user;
     }
 
     public List<User> getUsers() {
-        return users;
+        return userDatabase.get();
     }
 
     public void addRequest(User user, float time){
@@ -185,6 +186,27 @@ public class UserManager implements MessageSubscriber, Device {
             UserRequest userRequest = new UserRequest(user, (int) time * 60);
             userQueue.add(userRequest);
         }
+    }
+
+    public void giveAdminPrivileges(User user){
+        user.setAdmin(true);
+        userDatabase.add(user);
+    }
+
+    public void banUser(User user){
+        user.setBanned(true);
+        userDatabase.add(user);
+
+        userQueue.removeIf(usr -> usr.getUser().getName().equals(user.getName()));
+        if(activeUser.get().getName().equals(user.getName())){
+            activeUser.set(null);
+            activeUserTimerSeconds.set(0f);
+        }
+    }
+
+    public void unbanUser(User user){
+        user.setBanned(false);
+        userDatabase.add(user);
     }
 
     @Override
@@ -225,7 +247,7 @@ public class UserManager implements MessageSubscriber, Device {
                 String requestOwner;
 
                 if(instruction.split(" ").length == 3){
-                    if(command.getOwner().hasAdminPrivileges()){
+                    if(command.getOwner().isAdmin()){
                         requestOwner = instruction.split(" ")[2];
                     } else {
                         throw new ReturnMessageException("Needs admin privilege");
@@ -246,16 +268,15 @@ public class UserManager implements MessageSubscriber, Device {
             case "ban" -> {
                 String userName = instruction.split(" ")[1];
                 User user = getUser(userName);
-                user.setBanned(true);
+                banUser(user);
                 throw new ReturnMessageException("User " + userName + " is now banned.", MessageType.INFO);
             }
 
             case "unban" -> {
                 String userName = instruction.split(" ")[1];
                 User user = getUser(userName);
-                user.setBanned(true);
                 if(user.isBanned()){
-                    user.setBanned(false);
+                    unbanUser(user);
                     throw new ReturnMessageException("User " + userName + " is now unbanned.", MessageType.INFO);
                 } else {
                     throw new ReturnMessageException("User " + userName + " is not on banned list.", MessageType.ERROR);

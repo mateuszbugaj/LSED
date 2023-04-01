@@ -1,19 +1,15 @@
 package Devices;
 
-import Interpreter.Interpreter;
-import Utils.Subscriber;
+import StreamingService.Message;
+import StreamingService.User;
+import Utils.LSEDConfig;
 import View.Camera;
-import Utils.Publisher;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class ExternalDevice implements Device, ReceivedMessagesPublisher, CurrentStatePublisher {
     private static final Logger logger = LoggerFactory.getLogger(ExternalDevice.class);
@@ -60,8 +56,10 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
                             if(!waitingForConformation){
                                 try {
                                     sendMessage(deviceCommand.getDeviceInstructions().pop());
-                                    waitingForConformation = true;
-                                    logger.debug("Device is waiting for instruction confirmation");
+                                    if(serialCom != null && serialCom.getPortName() !=null ){
+                                        waitingForConformation = true;
+                                        logger.debug("Device is waiting for instruction confirmation");
+                                    }
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -89,13 +87,14 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
 
     // todo: temp, should not be public and only available by the serial port
     public void receiveMessage(ReceivedMessage receivedMessage){
-        logger.debug("Received message: " + receivedMessage.getMessage());
+        logger.debug("Received message: " + receivedMessage.getContent());
         receivedMessages.add(receivedMessage); // todo: is this list even used?
-        if(waitingForConformation && receivedMessage.getMessage().compareTo("done") == 0){
+        if(waitingForConformation && receivedMessage.getContent().compareTo("done") == 0){
             logger.debug("Device is no longer waiting");
             waitingForConformation = false;
         }
 
+        LSEDConfig.get().getLogRegister().log(receivedMessage);
         receivedMessageSubscriber.forEach(s -> s.addReceivedMessage(receivedMessage));
     }
 
@@ -111,6 +110,11 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
     public void sendMessage(String message) throws IOException {
         logger.debug("Sending message: " + message);
         serialCom.sendMessage(message + '\n' + '\r');
+        LSEDConfig.get().getLogRegister().log(new Message(new User("DeviceManager -> " + deviceName), message, new Date()));
+
+        if(serialCom != null || serialCom.getPortName() != null){
+            receivedMessageSubscriber.forEach(s -> s.addReceivedMessage(new ReceivedMessage(deviceName ,message, new Date())));
+        }
     }
 
     public ArrayList<ReceivedMessage> getReceivedMessagesList(){

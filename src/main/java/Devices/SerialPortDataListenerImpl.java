@@ -46,7 +46,7 @@ public class SerialPortDataListenerImpl implements SerialPortDataListener {
             String[] messageSplit = receivedMessage.split("\r");
             for(int i = 0; i < messageSplit.length; i++){
                 if(i < fullMessageCount){
-                    device.receiveMessage(new ReceivedMessage(messageSplit[i].trim(), new Date()));
+                    device.receiveMessage(new ReceivedMessage(device.getName(), messageSplit[i].trim(), new Date()));
                 } else {
                     buffer = buffer.concat(messageSplit[i]);
                 }

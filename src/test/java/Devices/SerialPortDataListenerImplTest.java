@@ -27,7 +27,7 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = msgWithCaretReturn;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, msgWithCaretReturn.getBytes()));
 
-        assertEquals(msg.trim(), device.getReceivedMessagesList().get(0).getMessage());
+        assertEquals(msg.trim(), device.getReceivedMessagesList().get(0).getContent());
     }
 
     @Test
@@ -37,7 +37,7 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = msgWithCaretReturn;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, msgWithCaretReturn.getBytes()));
 
-        assertEquals(msg.trim(), device.getReceivedMessagesList().get(0).getMessage());
+        assertEquals(msg.trim(), device.getReceivedMessagesList().get(0).getContent());
     }
 
     @Test
@@ -52,7 +52,7 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = chunk2WithCaretReturn;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, chunk2WithCaretReturn.getBytes()));
 
-        assertEquals(completeMsg.trim(), device.getReceivedMessagesList().get(0).getMessage());
+        assertEquals(completeMsg.trim(), device.getReceivedMessagesList().get(0).getContent());
     }
 
     @Test
@@ -72,7 +72,7 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = chunk3WithCaretReturn;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, chunk3WithCaretReturn.getBytes()));
 
-        assertEquals(completeMsg.trim(), device.getReceivedMessagesList().get(0).getMessage());
+        assertEquals(completeMsg.trim(), device.getReceivedMessagesList().get(0).getContent());
     }
 
     @Test
@@ -88,8 +88,8 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = msgTwoWithCaretReturn;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, msgTwoWithCaretReturn.getBytes()));
 
-        assertEquals(msgOne.trim(), device.getReceivedMessagesList().get(0).getMessage());
-        assertEquals(msgTwo.trim(), device.getReceivedMessagesList().get(1).getMessage());
+        assertEquals(msgOne.trim(), device.getReceivedMessagesList().get(0).getContent());
+        assertEquals(msgTwo.trim(), device.getReceivedMessagesList().get(1).getContent());
     }
 
     @Test
@@ -103,8 +103,8 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = chunkTwo;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, chunkTwo.getBytes()));
 
-        assertEquals("Message one", device.getReceivedMessagesList().get(0).getMessage());
-        assertEquals("Message two", device.getReceivedMessagesList().get(1).getMessage());
+        assertEquals("Message one", device.getReceivedMessagesList().get(0).getContent());
+        assertEquals("Message two", device.getReceivedMessagesList().get(1).getContent());
     }
 
     @Test
@@ -118,9 +118,9 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = chunkTwo;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, chunkTwo.getBytes()));
 
-        assertEquals("Message one", device.getReceivedMessagesList().get(0).getMessage());
-        assertEquals("Message two", device.getReceivedMessagesList().get(1).getMessage());
-        assertEquals("Message three", device.getReceivedMessagesList().get(2).getMessage());
+        assertEquals("Message one", device.getReceivedMessagesList().get(0).getContent());
+        assertEquals("Message two", device.getReceivedMessagesList().get(1).getContent());
+        assertEquals("Message three", device.getReceivedMessagesList().get(2).getContent());
     }
 
     @Test
@@ -138,10 +138,10 @@ class SerialPortDataListenerImplTest {
         dataListener.receivedMessage = chunkThree;
         dataListener.serialEvent(new SerialPortEvent(SerialPort.getCommPorts()[0], SerialPort.LISTENING_EVENT_DATA_AVAILABLE, chunkThree.getBytes()));
 
-        assertEquals("Got lgt on", device.getReceivedMessagesList().get(0).getMessage());
-        assertEquals("Lights on", device.getReceivedMessagesList().get(1).getMessage());
-        assertEquals("Brightness: 64", device.getReceivedMessagesList().get(2).getMessage());
-        assertEquals("done", device.getReceivedMessagesList().get(3).getMessage());
+        assertEquals("Got lgt on", device.getReceivedMessagesList().get(0).getContent());
+        assertEquals("Lights on", device.getReceivedMessagesList().get(1).getContent());
+        assertEquals("Brightness: 64", device.getReceivedMessagesList().get(2).getContent());
+        assertEquals("done", device.getReceivedMessagesList().get(3).getContent());
     }
 
 }

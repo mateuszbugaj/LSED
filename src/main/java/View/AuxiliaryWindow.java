@@ -210,7 +210,7 @@ public class AuxiliaryWindow implements Publisher<Message> {
         String output = "";
         if(deviceMediator != null){
             for(int i = deviceMediator.receivedMessages.size() - 1; i >= 0; i--){
-                output = output.concat(deviceMediator.receivedMessages.get(i).getMessage()).concat("\n");
+                output = output.concat(deviceMediator.receivedMessages.get(i).getContent()).concat("\n");
             }
         }
 
@@ -240,10 +240,6 @@ public class AuxiliaryWindow implements Publisher<Message> {
         chatInputTextField.setOnKeyPressed(event -> {
             if(event.getCode() == KeyCode.ENTER){
                 if(!chatInputTextField.getText().isEmpty()){
-//                    chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-//                    chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-//                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage("Admin", chatInputTextField.getText(), new Date())));
-//                    receivedMessageSubscriber.forEach(s -> s.update(new UserMessage(UserManager.getUser("Admin"), chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
                     chatManager.handleNewMessage(chatInputTextField.getText(), "Admin");
                     chatInputTextField.setText("");
                 }
@@ -255,9 +251,6 @@ public class AuxiliaryWindow implements Publisher<Message> {
         sendChatInputButton.setMinWidth(100);
         sendChatInputButton.setOnAction(event -> {
             if(!chatInputTextField.getText().isEmpty()){
-//                chatManager.getChatMessages().add(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-//                chatManager.sendMessage(new UserMessage("Admin", chatInputTextField.getText(), new Date()));
-//                receivedMessageSubscriber.forEach(s -> s.update(new UserMessage(UserManager.getUser("Admin"), chatInputTextField.getText(), new Date()).setMessageType(MessageType.ADMIN_MESSAGE)));
                 chatManager.handleNewMessage(chatInputTextField.getText(), "Admin");
                 chatInputTextField.setText("");
             }

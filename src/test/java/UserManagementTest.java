@@ -11,7 +11,7 @@ public class UserManagementTest {
     @Test
     public void addUserTest() {
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         String userName = "user1";
 
         // When
@@ -26,7 +26,7 @@ public class UserManagementTest {
     @Test
     public void addMessageTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         String messageContent = "Message Content ABC";
         String messageUserName = "User1";
@@ -44,7 +44,7 @@ public class UserManagementTest {
     @Test
     public void addMultipleMessages(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         String messageContent = "Message Content ABC";
         String messageUserName1 = "User1";
@@ -65,7 +65,7 @@ public class UserManagementTest {
     @Test
     public void changeActiveUserAfterRequest() throws Exception {
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         String newUserName = "User1";
         Message message = new Message(userManager.getUser(newUserName), "!control request 10", new Date());
         message.setType(MessageType.COMMAND);
@@ -82,7 +82,7 @@ public class UserManagementTest {
     @Test
     public void userRequestQueueTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
 
         // When
         userManager.addRequest(userManager.getUser("User1"), 0.1f);
@@ -103,7 +103,7 @@ public class UserManagementTest {
     @Test
     public void annotateCommandMessageTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         Message requestMessage = new Message(userManager.getUser("User1"), "!control request 5");
         requestMessage.setType(MessageType.COMMAND);
 
@@ -117,7 +117,7 @@ public class UserManagementTest {
     @Test
     public void ignoreAnnotationOfNotCommandMessageTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         Message requestMessage = new Message(userManager.getUser("User1"), "!control request 5");
         requestMessage.setType(MessageType.MESSAGE);
 
@@ -131,7 +131,7 @@ public class UserManagementTest {
     @Test
     public void requestErrorMessageTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         chatManager.addMessageSubscriber(userManager);
         Message requestMessage = new Message(userManager.getUser("User1"), "!control abc 5");
@@ -146,7 +146,7 @@ public class UserManagementTest {
     @Test
     public void banUserTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         chatManager.addMessageSubscriber(userManager);
         String bannedUsername = "User1";
@@ -167,7 +167,7 @@ public class UserManagementTest {
     @Test
     public void unbanUserTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         chatManager.addMessageSubscriber(userManager);
         String bannedUsername = "User1";
@@ -195,7 +195,7 @@ public class UserManagementTest {
     public void requestControlForAnotherUserTest() throws Exception {
         // Given
         String userAdmin = "UserAdmin";
-        UserManager userManager = new UserManager(List.of(), List.of(userAdmin));
+        UserManager userManager = new UserManager(List.of(userAdmin));
         String requestTarget = "User1";
         Message message = new Message(userManager.getUser(userAdmin), "!control request 10 " + requestTarget);
         message.setType(MessageType.COMMAND);
@@ -212,7 +212,7 @@ public class UserManagementTest {
     public void requestControlForAnotherUserAsNonAdminTest() throws Exception {
         // Given
         String userNonAdmin = "UserX";
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         String requestTarget = "User1";
         Message message = new Message(userManager.getUser(userNonAdmin), "!control request 10 " + requestTarget);
         message.setType(MessageType.COMMAND);

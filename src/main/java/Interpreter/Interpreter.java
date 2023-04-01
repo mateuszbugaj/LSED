@@ -44,6 +44,7 @@ public class Interpreter {
         return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents(), commandDTO.getRequiredStates(), commandDTO.getResultingState());
     }
 
+    // todo: bug: when there is command with parameter in type of String and Integer, the range for Integer is not recognized and parameter is treated as string
     public static List<DeviceCommand> interpret(Message message) throws ReturnMessageException {
         List<DeviceCommand> commandsToExecute = new ArrayList<>();
         if(!isCommand(message)){
@@ -67,7 +68,7 @@ public class Interpreter {
             }
 
             if(commandComponents.length >= 2 && commandComponents[1].equals("help")){
-                String commandsHelp = targetDevice.getCommands().stream().filter(i -> i.getPrefix().equals(commandComponents[0])).map(DeviceCommand::getHelpMessage).collect(Collectors.joining());
+                String commandsHelp = targetDevice.getCommands().stream().filter(i -> i.getPrefix().equals(commandComponents[0])).map(i -> i.getHelpMessage() + '\n').collect(Collectors.joining());
                 throw new ReturnMessageException(commandsHelp, MessageType.INFO);
             }
 
@@ -187,7 +188,7 @@ public class Interpreter {
         return true;
     }
 
-    private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand){
+    private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand) throws ReturnMessageException {
         if(deviceCommand.getEvents() == null || deviceCommand.getEvents().isEmpty()){
             String instruction = deviceCommand.getDevicePrefix();
             for(int paramId = 0; paramId < deviceCommand.getParams().size(); paramId++){
@@ -199,14 +200,14 @@ public class Interpreter {
                     if(deviceCommandParam.getPossibleValues().isEmpty() || deviceCommandParam.getPossibleValues().stream().anyMatch(j -> j.equals(commandComponent))){
                         instruction = instruction.concat(" ").concat(commandComponent);
                     } else {
-                        throw new RuntimeException("Parameter " + (paramId+1) + " needs to be from list: " + deviceCommandParam.getPossibleValues());
+                        throw new ReturnMessageException("Parameter " + (paramId+1) + " needs to be from list: " + deviceCommandParam.getPossibleValues());
                     }
                 }
             }
             return List.of(instruction);
         } else {
             List<String> events = deviceCommand.getEvents();
-            // Collections.reverse(events); // todo: Why reverse?
+             Collections.reverse(events); // todo: Why reverse?
 
             return events;
         }

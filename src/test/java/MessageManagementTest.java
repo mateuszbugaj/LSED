@@ -13,7 +13,7 @@ public class MessageManagementTest {
         String messageContent = "Message content ABC";
         String userName = "User1";
 
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
 
         // When
@@ -29,7 +29,7 @@ public class MessageManagementTest {
 
     @Test
     public void setMessageTypeTest(){
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
 
         /* USER MESSAGE */
@@ -88,7 +88,7 @@ public class MessageManagementTest {
     @Test
     public void messageSubscriptionTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         String messageContent = "!system abc";
         String userName = "User1";
@@ -121,7 +121,7 @@ public class MessageManagementTest {
     @Test
     public void messageWithErrorTest(){
         // Given
-        UserManager userManager = new UserManager(List.of(), List.of());
+        UserManager userManager = new UserManager(List.of());
         ChatManager chatManager = new ChatManager(userManager);
         String messageContent = "!system abc";
         String userName = "User1";

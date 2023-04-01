@@ -183,7 +183,8 @@ public class DeviceManager implements Device, MessageSubscriber {
     @Override
     public void handleMessage(Message message) throws ReturnMessageException {
         logger.debug("Received device user message: " + message);
-        if(!message.getUser().hasAdminPrivileges() && userManager.getActiveUser().get() != null && !message.getUser().getName().equals(userManager.getActiveUser().get().getName())){
+
+        if(!message.getUser().isAdmin() && (userManager.getActiveUser().get() == null || !message.getUser().getName().equals(userManager.getActiveUser().get().getName()))){
             return;
         }
 

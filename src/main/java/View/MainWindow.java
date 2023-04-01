@@ -672,7 +672,7 @@ public class MainWindow implements MessageSubscriber {
 //            cell.setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
             cell.setBorder(new Border(new BorderStroke(Paint.valueOf("grey"), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0, 0, 1, 0))));
 
-            Text content = new Text(receivedMessage.getMessage());
+            Text content = new Text(receivedMessage.getContent());
             content.setWrappingWidth(250);
             content.setFill(Paint.valueOf("white"));
 
@@ -777,11 +777,13 @@ public class MainWindow implements MessageSubscriber {
         messages.sort(Comparator.comparing(Message::getTimestamp));
         if(messages.size() > 100) messages.subList(messages.size() - 100, messages.size()); // cap size at 100
 
-        messageCellList.getChildren().clear();
-        for(Message msg: messages){
-            Pane cell = generateUserMessageCell(msg);
-            cell.setRotate(180);
-            messageCellList.getChildren().add(0, cell);
-        }
+        Platform.runLater(() -> {
+            messageCellList.getChildren().clear();
+            for(Message msg: messages){
+                Pane cell = generateUserMessageCell(msg);
+                cell.setRotate(180);
+                messageCellList.getChildren().add(0, cell);
+            }
+        });
     }
 }

@@ -45,7 +45,7 @@ public class SerialCom {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (NullPointerException e){
-            System.out.println("Serial not selected");
+            logger.debug("Serial not selected");
         }
     }
 
@@ -61,7 +61,7 @@ public class SerialCom {
 
     public void sendMessage(String message) throws IOException {
         if(message == null || message.isEmpty()){
-            System.out.println("Cannot send empty message to the robot!");
+            logger.debug("Cannot send empty message to the robot!");
         }
 
         if(serialPort != null){
