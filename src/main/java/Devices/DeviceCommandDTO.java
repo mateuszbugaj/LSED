@@ -2,9 +2,7 @@ package Devices;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
     private String name;
@@ -15,6 +13,7 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
     private List<String> events = new ArrayList<>();
     private List<String> requiredStates = new ArrayList<>();
     private String resultingState = "";
+    private Map<String, String> vars = new HashMap<>();
 
     public String getName() {
         return name;
@@ -78,6 +77,14 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
 
     public void setResultingState(String resultingState) {
         this.resultingState = resultingState;
+    }
+
+    public Map<String, String> getVars() {
+        return vars;
+    }
+
+    public void setVars(Map<String, String> vars) {
+        this.vars = vars;
     }
 
     @Override

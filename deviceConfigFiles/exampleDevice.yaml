@@ -26,7 +26,13 @@ commands:
   - name: "Send scenario"
     description: "Send a list of predefined values to the device"
     prefix: "send_1"
+    vars: {
+      VAR1: "111",
+      VAR2: "222"
+    }
     events: [
+      "$VAR1",
+      ">> $VAR2",
       "ABC",
       "XXX",
       "YYY",

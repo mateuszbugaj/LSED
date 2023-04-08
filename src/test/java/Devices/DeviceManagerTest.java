@@ -5,6 +5,7 @@ import Utils.ReturnMessageException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 
 class DeviceManagerTest {

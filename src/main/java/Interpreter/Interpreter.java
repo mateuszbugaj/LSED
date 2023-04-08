@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,35 @@ public class Interpreter {
             params.add(deviceCommandParam);
         }
 
-        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, commandDTO.getEvents(), commandDTO.getRequiredStates(), commandDTO.getResultingState());
+        List<String> replacedVariablesString = new ArrayList<>();
+        for(String event: commandDTO.getEvents()){
+            replacedVariablesString.add(replaceVariables(event, commandDTO.getVars()));
+        }
+
+        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, replacedVariablesString, commandDTO.getRequiredStates(), commandDTO.getResultingState());
+    }
+
+    public static String replaceVariables(String input, Map<String, String> variables) {
+        String result = input;
+        Pattern variablePattern = Pattern.compile("\\$\\w+");
+
+        // Detect and report undefined variables
+        Matcher matcher = variablePattern.matcher(input);
+        while (matcher.find()) {
+            String variable = matcher.group();
+            String variableKey = variable.substring(1);
+            if (!variables.containsKey(variableKey)) {
+                logger.error("Undefined variable: " + variable);
+            }
+        }
+
+        // Replace variables
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            String variable = "$" + entry.getKey();
+            String value = entry.getValue();
+            result = result.replace(variable, value);
+        }
+        return result;
     }
 
     // todo: bug: when there is command with parameter in type of String and Integer, the range for Integer is not recognized and parameter is treated as string
@@ -207,7 +236,7 @@ public class Interpreter {
             return List.of(instruction);
         } else {
             List<String> events = deviceCommand.getEvents();
-             Collections.reverse(events); // todo: Why reverse?
+            Collections.reverse(events); // todo: Why reverse?
 
             return events;
         }

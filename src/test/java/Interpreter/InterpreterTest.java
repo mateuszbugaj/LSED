@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class InterpreterTest {
 
@@ -234,5 +236,47 @@ public class InterpreterTest {
 
         System.out.println(exception.getMessage());
 //        Assertions.assertEquals("Z", exception.getMessage());
+    }
+
+    @Test
+    public void interpretVarsTest() {
+
+        DeviceCommandDTO commandDTO = new DeviceCommandDTO();
+
+        /*
+          - name: "Send scenario"
+            description: "Send a list of predefined values to the device"
+            prefix: "send_1"
+            vars: {
+              var1: "VAR1",
+              var2: "VAR2"
+            }
+            events: [
+              "$VAR1",
+              ">> $VAR2",
+              "ABC",
+              "XXX",
+              "YYY",
+              "ZZZ"
+            ]
+        * */
+
+        commandDTO.setName("Send scenario");
+        commandDTO.setDescription("Send a list of predefined values to the device");
+        commandDTO.setPrefix("send_1");
+        Map<String, String> vars = new HashMap<>();
+        vars.put("VAR1", "111");
+        vars.put("VAR2", "222");
+        commandDTO.setVars(vars);
+        commandDTO.setEvents(List.of(
+                "$VAR1",
+                ">> $VAR1$VAR2 xxx $VAR2",
+                "$VAR3",
+                "ABC",
+                "XXX"
+        ));
+
+        DeviceCommand command = Interpreter.buildCommand(commandDTO);
+        System.out.println(command.getEvents());
     }
 }

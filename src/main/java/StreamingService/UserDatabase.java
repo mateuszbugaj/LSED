@@ -24,6 +24,8 @@ public class UserDatabase {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        get();
     }
 
 
@@ -36,8 +38,8 @@ public class UserDatabase {
             });
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException e){
+            System.out.println(e.getMessage());
         }
 
         return users;
