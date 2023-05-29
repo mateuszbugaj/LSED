@@ -3,10 +3,9 @@ package Utils;
 import Devices.ReceivedMessage;
 import StreamingService.Message;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.StringWriter;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,6 +17,10 @@ public class LogRegister {
         if(logFilePath.isEmpty()){
             writer = new BufferedWriter(new StringWriter());
             return;
+        }
+
+        if(Files.notExists(Path.of(logFilePath))){
+            new File(logFilePath).mkdir();
         }
 
         try {
