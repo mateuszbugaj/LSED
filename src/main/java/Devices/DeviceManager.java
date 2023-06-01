@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DeviceManager implements Device, MessageSubscriber {
     private static final Logger logger = LoggerFactory.getLogger(DeviceManager.class);
@@ -191,7 +192,7 @@ public class DeviceManager implements Device, MessageSubscriber {
         if(message.getMessageType().equals(MessageType.SYSTEM_COMMAND) || message.getMessageType().equals(MessageType.DEVICE_COMMAND)){
             try{
                 List<DeviceCommand> deviceCommandsToExecute = Interpreter.interpret(message);
-                logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).toList());
+                logger.debug("Received following deviceInstructions form Interpreter: " + deviceCommandsToExecute.stream().map(DeviceCommand::getDeviceInstructions).collect(Collectors.toList()));
                 for(DeviceCommand command:deviceCommandsToExecute){
                     message.getTargetDevice().addCommandToExecute(command);
                 }

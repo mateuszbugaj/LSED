@@ -81,7 +81,7 @@ public class Interpreter {
         logger.debug("Interpreting command message: " + message);
 
         String commandContent = message.getContent().substring(1).substring(message.getContent().indexOf(' '));
-        List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).toList();
+        List<String> commands = Arrays.stream(commandContent.split(COMMAND_SPLITTER)).map(String::strip).collect(Collectors.toList());
         logger.debug("UserMessage split into " + commands.size() + (commands.size() < 2 ? " command: " : " commands: ") + commands);
         for(String command:commands){
             String[] commandComponents = command.split(" ");
@@ -137,7 +137,7 @@ public class Interpreter {
                 .getCommands()
                 .stream()
                 .filter(i -> i.getPrefix().compareTo(commandPrefix) == 0)
-                .filter(i -> i.getParams().stream().filter(k -> !k.getOptional()).count() <= parametersNumber).toList();
+                .filter(i -> i.getParams().stream().filter(k -> !k.getOptional()).count() <= parametersNumber).collect(Collectors.toList());
 
         List<DeviceCommand> deviceCommands = new ArrayList<>();
         for(DeviceCommand deviceCommand:potentialDeviceCommands){
@@ -183,7 +183,7 @@ public class Interpreter {
             }
 
             return 1;
-        }).toList();
+        }).collect(Collectors.toList());
 
         return segregatedDeviceCommands;
     }
