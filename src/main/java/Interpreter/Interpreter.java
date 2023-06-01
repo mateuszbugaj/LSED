@@ -201,7 +201,7 @@ public class Interpreter {
             if(paramId < userCommandParametersNumber){
                 String commandComponent = commandComponents[paramId + 1];
                 if(param.getType() == DeviceCommandParamType.Integer){
-                    int value = Integer.parseInt(commandComponent);
+                    float value = Float.parseFloat(commandComponent);
                     if(!(value >= param.getRangeMin() && value <= param.getRangeMax())){
                         return false;
                     }
