@@ -14,6 +14,7 @@ public class ExternalDeviceDTO implements Comparable<ExternalDeviceDTO>{
     private List<CameraDTO> cameras = new ArrayList<>();
     private List<DeviceCommandDTO> commands = new ArrayList<>();
     private String initialState;
+    private String confirmation = "";
 
     public String getName() {
         return name;
@@ -61,6 +62,14 @@ public class ExternalDeviceDTO implements Comparable<ExternalDeviceDTO>{
 
     public String getInitialState() {
         return initialState;
+    }
+
+    public String getConfirmation() {
+        return confirmation;
+    }
+
+    public void setConfirmation(String confirmation) {
+        this.confirmation = confirmation;
     }
 
     @Override

@@ -27,13 +27,15 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
     private final Integer timeoutTimer = 100; // sec
     private final Thread deviceThread;
     private DeviceState currentState;
+    private String confirmation;
 
-    public ExternalDevice(String deviceName, SerialCom serialCom, List<Camera> cameras, List<DeviceCommand> commands, String initialState){
+    public ExternalDevice(String deviceName, SerialCom serialCom, List<Camera> cameras, List<DeviceCommand> commands, String initialState, String confirmation){
         this.deviceName = deviceName;
         this.serialCom = serialCom;
         this.cameras = cameras;
         this.deviceCommands = commands;
         this.currentState = new DeviceState(initialState);
+        this.confirmation = confirmation;
 
         if(cameras.size() > 0){
             selectedCamera = cameras.get(0);
@@ -57,7 +59,9 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
                                 try {
                                     sendMessage(deviceCommand.getDeviceInstructions().pop());
                                     if(serialCom != null && serialCom.getPortName() !=null ){
-                                        waitingForConformation = true;
+                                        if(!confirmation.equals("")){
+                                            waitingForConformation = true;
+                                        }
                                         logger.debug("Device is waiting for instruction confirmation");
                                     }
                                 } catch (IOException e) {
@@ -89,7 +93,7 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
     public void receiveMessage(ReceivedMessage receivedMessage){
         logger.debug("Received message: " + receivedMessage.getContent());
         receivedMessages.add(receivedMessage); // todo: is this list even used?
-        if(waitingForConformation && receivedMessage.getContent().compareTo("done") == 0){
+        if(waitingForConformation && receivedMessage.getContent().compareTo(confirmation) == 0){
             logger.debug("Device is no longer waiting");
             waitingForConformation = false;
         }

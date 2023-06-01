@@ -21,6 +21,7 @@ public class ExternalDeviceBuilder {
 //    private Integer timeoutTimer = 100; // sec
 //    private Thread deviceThread;
     private String initialState;
+    private String confirmation = "";
 
     public ExternalDeviceBuilder setDeviceName(String deviceName){
         this.deviceName = deviceName;
@@ -73,13 +74,20 @@ public class ExternalDeviceBuilder {
         return this;
     }
 
+    public ExternalDeviceBuilder setConfirmation(String confirmation){
+        this.confirmation = confirmation;
+
+        return this;
+    }
+
     public ExternalDevice build(){
-        ExternalDevice device = new ExternalDevice(deviceName, serialCom, cameras, commands, initialState);
+        ExternalDevice device = new ExternalDevice(deviceName, serialCom, cameras, commands, initialState, confirmation);
         deviceName = null;
         serialCom = null;
         cameras = new ArrayList<>();
         commands = new ArrayList<>();
         initialState = null;
+        confirmation = "";
 
         return device;
     }
