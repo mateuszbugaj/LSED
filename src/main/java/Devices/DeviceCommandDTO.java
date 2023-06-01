@@ -8,7 +8,7 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
     private String name;
     private String description = "";
     private String prefix;
-    private String devicePrefix = "";
+    private String output = "";
     private List<DeviceCommandParamDTO> params = new ArrayList<>();
     private List<String> events = new ArrayList<>();
     private List<String> requiredStates = new ArrayList<>();
@@ -39,12 +39,12 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
         this.prefix = prefix;
     }
 
-    public String getDevicePrefix() {
-        return devicePrefix;
+    public String getOutput() {
+        return output;
     }
 
-    public void setDevicePrefix(String devicePrefix) {
-        this.devicePrefix = devicePrefix;
+    public void setOutput(String output) {
+        this.output = output;
     }
 
     public List<DeviceCommandParamDTO> getParams() {
@@ -92,7 +92,7 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
         if(!(name.equals(o.getName()) &&
                 description.equals(o.getDescription()) &&
                 prefix.equals(o.getPrefix()) &&
-                devicePrefix.equals(o.getDevicePrefix()))){
+                output.equals(o.getOutput()))){
             return -1;
         }
 
@@ -141,7 +141,7 @@ public class DeviceCommandDTO implements Comparable<DeviceCommandDTO>{
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", prefix='" + prefix + '\'' +
-                ", devicePrefix='" + devicePrefix + '\'' +
+                ", devicePrefix='" + output + '\'' +
                 ", params=" + params +
                 '}';
     }

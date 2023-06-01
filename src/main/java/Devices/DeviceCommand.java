@@ -4,7 +4,6 @@ import StreamingService.User;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
@@ -13,7 +12,7 @@ public class DeviceCommand{
     private final String name;
     private final String description;
     private final String prefix;
-    private final String devicePrefix;
+    private final String output;
     private final List<DeviceCommandParam> params;
     private final List<String> events; // todo: make it part of the distinct class DeviceCommandScenario
     private final List<String> requiredStates;
@@ -21,11 +20,11 @@ public class DeviceCommand{
     private Stack<String> deviceInstructions;
     private User owner;
 
-    public DeviceCommand(String name, String description, String prefix, String devicePrefix, List<DeviceCommandParam> params, List<String> events, List<String> requiredStates, String resultingState) {
+    public DeviceCommand(String name, String description, String prefix, String output, List<DeviceCommandParam> params, List<String> events, List<String> requiredStates, String resultingState) {
         this.name = name;
         this.description = description;
         this.prefix = prefix;
-        this.devicePrefix = devicePrefix;
+        this.output = output;
         this.params = params;
         this.events = events;
         this.requiredStates = requiredStates;
@@ -44,8 +43,8 @@ public class DeviceCommand{
         return prefix;
     }
 
-    public String getDevicePrefix() {
-        return devicePrefix;
+    public String getOutput() {
+        return output;
     }
 
     public List<DeviceCommandParam> getParams() {
@@ -101,7 +100,7 @@ public class DeviceCommand{
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", prefix='" + prefix + '\'' +
-                ", devicePrefix='" + devicePrefix + '\'' +
+                ", devicePrefix='" + output + '\'' +
                 ", params=" + params +
                 ", events=" + events +
                 ", deviceInstructions=" + deviceInstructions +

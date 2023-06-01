@@ -20,7 +20,7 @@ public class InterpreterTest {
         commandDTO.setName("Move Relative");
         commandDTO.setDescription("Move device by distance of millimeters.");
         commandDTO.setPrefix("moveBy");
-        commandDTO.setDevicePrefix("mv");
+        commandDTO.setOutput("mv");
 
         DeviceCommandParamDTO param11 = new DeviceCommandParamDTO();
         param11.setName("XAxisDistance");
@@ -58,7 +58,7 @@ public class InterpreterTest {
         Assertions.assertEquals(expectedCommand.getName(), buildCommand.getName());
         Assertions.assertEquals(expectedCommand.getDescription(), buildCommand.getDescription());
         Assertions.assertEquals(expectedCommand.getPrefix(), buildCommand.getPrefix());
-        Assertions.assertEquals(expectedCommand.getDevicePrefix(), buildCommand.getDevicePrefix());
+        Assertions.assertEquals(expectedCommand.getOutput(), buildCommand.getOutput());
         Assertions.assertEquals(expectedCommand.getParams().size(), buildCommand.getParams().size());
         Assertions.assertEquals(expectedCommand.getParams().get(0).getName(), buildCommand.getParams().get(0).getName());
         Assertions.assertEquals(expectedCommand.getParams().get(0).getType(), buildCommand.getParams().get(0).getType());

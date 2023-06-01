@@ -10,15 +10,15 @@ commands:
   - name: "Send values"
     description: "Send integer value to the device"
     prefix: "send"
-    devicePrefix: ">"
+    output: "> [$PositiveInteger] [0] [0]"
     params:
-      - name: "Positive Integer"
+      - name: "PositiveInteger"
         type: Integer
         range: [0, 100]
   - name: "Send values"
     description: "Send selected values to the device"
     prefix: "send"
-    devicePrefix: ">"
+    output: "> $Chars"
     params:
       - name: "Chars"
         type: String

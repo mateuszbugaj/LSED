@@ -41,7 +41,7 @@ public class yamlFileTest {
         command1.setName("Move Relative");
         command1.setDescription("Move device by distance of millimeters.");
         command1.setPrefix("moveBy");
-        command1.setDevicePrefix("mv");
+        command1.setOutput("mv");
         command1.setRequiredStates(List.of("Home", "Position_1"));
         command1.setResultingState("Moved");
 
@@ -70,7 +70,7 @@ public class yamlFileTest {
         command2.setName("Light Switch");
         command2.setDescription("Switch bed light ON and OFF.");
         command2.setPrefix("light");
-        command2.setDevicePrefix("lgt");
+        command2.setOutput("lgt");
 
         DeviceCommandParamDTO param21 = new DeviceCommandParamDTO();
         param21.setName("State");
@@ -89,7 +89,7 @@ public class yamlFileTest {
         command3.setName("Home Manipulator");
         command3.setDescription("Move Manipulator to its Home position in all axes.");
         command3.setPrefix("home");
-        command3.setDevicePrefix("G28");
+        command3.setOutput("G28");
         command3.setRequiredStates(List.of("Start", "Home", "Position_1", "Moved"));
         command3.setResultingState("Home");
 

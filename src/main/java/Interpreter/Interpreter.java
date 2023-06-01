@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -47,7 +46,7 @@ public class Interpreter {
             replacedVariablesString.add(replaceVariables(event, commandDTO.getVars()));
         }
 
-        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getDevicePrefix(), params, replacedVariablesString, commandDTO.getRequiredStates(), commandDTO.getResultingState());
+        return new DeviceCommand(commandDTO.getName(), commandDTO.getDescription(), commandDTO.getPrefix(), commandDTO.getOutput(), params, replacedVariablesString, commandDTO.getRequiredStates(), commandDTO.getResultingState());
     }
 
     public static String replaceVariables(String input, Map<String, String> variables) {
@@ -219,20 +218,23 @@ public class Interpreter {
 
     private static List<String> getInstructions(String[] commandComponents, DeviceCommand deviceCommand) throws ReturnMessageException {
         if(deviceCommand.getEvents() == null || deviceCommand.getEvents().isEmpty()){
-            String instruction = deviceCommand.getDevicePrefix();
-            for(int paramId = 0; paramId < deviceCommand.getParams().size(); paramId++){
-                DeviceCommandParam deviceCommandParam = deviceCommand.getParams().get(paramId);
-                if(paramId >= (commandComponents.length - 1)){
-                    instruction = instruction.concat(" ").concat(deviceCommandParam.getPredefined());
-                } else {
-                    String commandComponent = commandComponents[paramId + 1];
-                    if(deviceCommandParam.getPossibleValues().isEmpty() || deviceCommandParam.getPossibleValues().stream().anyMatch(j -> j.equals(commandComponent))){
-                        instruction = instruction.concat(" ").concat(commandComponent);
-                    } else {
-                        throw new ReturnMessageException("Parameter " + (paramId+1) + " needs to be from list: " + deviceCommandParam.getPossibleValues());
-                    }
-                }
+
+            String instruction = deviceCommand.getOutput();
+
+            // get parameters from the device command
+            List<DeviceCommandParam> params = deviceCommand.getParams();
+
+            // create a map from param name to command component
+            Map<String, String> paramMap = new HashMap<>();
+            for(int i = 0; i < params.size(); i++){
+                paramMap.put(params.get(i).getName(), commandComponents[i+1]); // +1 to ignore the prefix
             }
+
+            // replace variables in the instruction with corresponding values
+            for(Map.Entry<String, String> entry : paramMap.entrySet()){
+                instruction = instruction.replace("$" + entry.getKey(), entry.getValue());
+            }
+
             return List.of(instruction);
         } else {
             List<String> events = deviceCommand.getEvents();
