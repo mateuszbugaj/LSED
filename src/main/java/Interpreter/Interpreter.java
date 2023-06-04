@@ -227,7 +227,14 @@ public class Interpreter {
             // create a map from param name to command component
             Map<String, String> paramMap = new HashMap<>();
             for(int i = 0; i < params.size(); i++){
-                paramMap.put(params.get(i).getName(), commandComponents[i+1]); // +1 to ignore the prefix
+                System.out.println("> " + params.get(i).getName());
+                if(commandComponents.length - 1 > i){
+                    paramMap.put(params.get(i).getName(), commandComponents[i+1]); // +1 to ignore the prefix
+                } else if(!params.get(i).getOptional()){
+                    throw new ReturnMessageException("Parameter " + params.get(i).getName() + " is required.");
+                } else if(params.get(i).getOptional()){
+                    paramMap.put(params.get(i).getName(), "");
+                }
             }
 
             // replace variables in the instruction with corresponding values

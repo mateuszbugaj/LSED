@@ -41,7 +41,7 @@ public class DeviceManager implements Device, MessageSubscriber {
         });
 
         DeviceCommandParam changeCameraByNameCommandParam1 = new DeviceCommandParam(
-                "Camera Name",
+                "Camera_Name",
                 DeviceCommandParamType.String,
                 List.of(),
                 0,
@@ -52,7 +52,7 @@ public class DeviceManager implements Device, MessageSubscriber {
                 "Change camera",
                 "Change main camera to one of available for selected device by providing camera name",
                 "cc",
-                "camera",
+                "camera $Camera_Name",
                 List.of(changeCameraByNameCommandParam1),
                 List.of(),
                 List.of(),
@@ -60,7 +60,7 @@ public class DeviceManager implements Device, MessageSubscriber {
         systemCommands.add(changeCameraCommandByName);
 
         DeviceCommandParam changeCameraByIdCommandParam1 = new DeviceCommandParam(
-                "Camera ID",
+                "Camera_ID",
                 DeviceCommandParamType.Integer,
                 List.of(),
                 0,
@@ -71,7 +71,7 @@ public class DeviceManager implements Device, MessageSubscriber {
                 "Change camera",
                 "Change main camera to one of available for selected device  by providing camera ID",
                 "cc",
-                "camera",
+                "camera $Camera_ID",
                 List.of(changeCameraByIdCommandParam1),
                 List.of(),
                 List.of(),
@@ -79,7 +79,7 @@ public class DeviceManager implements Device, MessageSubscriber {
         systemCommands.add(changeCameraCommandById);
 
         DeviceCommandParam changeDeviceByIdCommandParam1 = new DeviceCommandParam(
-                "Device id",
+                "Device_id",
                 DeviceCommandParamType.Integer,
                 List.of(),
                 0,
@@ -90,7 +90,7 @@ public class DeviceManager implements Device, MessageSubscriber {
                 "Change device",
                 "Change selected device by providing ID",
                 "cd",
-                "device",
+                "device $Device_id",
                 List.of(changeDeviceByIdCommandParam1),
                 List.of(),
                 List.of(),
@@ -98,7 +98,7 @@ public class DeviceManager implements Device, MessageSubscriber {
         systemCommands.add(changeDeviceCommandById);
 
         DeviceCommandParam changeDeviceByNameCommandParam1 = new DeviceCommandParam(
-                "Device name",
+                "Device_name",
                 DeviceCommandParamType.String,
                 List.of(),
                 0,
@@ -109,7 +109,7 @@ public class DeviceManager implements Device, MessageSubscriber {
                 "Change device",
                 "Change selected device by providing name",
                 "cd",
-                "device",
+                "device $Device_name",
                 List.of(changeDeviceByNameCommandParam1),
                 List.of(),
                 List.of(),
