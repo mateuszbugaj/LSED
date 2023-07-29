@@ -69,7 +69,6 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
                                 }
 
                                 try {
-
                                     Thread.sleep(200);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
@@ -93,7 +92,7 @@ public class ExternalDevice implements Device, ReceivedMessagesPublisher, Curren
     public void receiveMessage(ReceivedMessage receivedMessage){
         logger.debug("Received message: " + receivedMessage.getContent());
         receivedMessages.add(receivedMessage); // todo: is this list even used?
-        if(waitingForConformation && receivedMessage.getContent().compareTo(confirmation) == 0){
+        if(waitingForConformation && receivedMessage.getContent().trim().endsWith(confirmation)){
             logger.debug("Device is no longer waiting");
             waitingForConformation = false;
         }

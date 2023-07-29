@@ -35,6 +35,7 @@ public class ExternalDeviceBuilderDirector {
                 .setCameras(deviceDTO.getCameras())
                 .setCommands(deviceDTO.getCommands())
                 .setInitialState(deviceDTO.getInitialState())
+                .setConfirmation(deviceDTO.getConfirmation())
                 .build();
     }
 }
